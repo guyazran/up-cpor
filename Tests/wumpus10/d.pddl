@@ -3,10 +3,7 @@
 
    (:requirements :strips :typing :contingent)
    (:types pos )
-   (:predicates (adj ?i ?j - pos) (at ?i - pos) (safe ?i - pos) 
-                (wumpus-at ?x - pos) (alive) (stench ?i - pos)
-                (gold-at ?i - pos) (got-the-treasure)
-                (breeze ?i - pos) (pit-at ?p - pos) )
+
    (:constants
    
     p1-1
@@ -112,6 +109,10 @@
 
      - pos
    )
+   (:predicates (adj ?i ?j - pos) (at ?i - pos) (safe ?i - pos) 
+                (wumpus-at ?x - pos) (alive) (stench ?i - pos)
+                (gold-at ?i - pos) (got-the-treasure)
+                (breeze ?i - pos) (pit-at ?p - pos) )
    
    (:action move
       :parameters (?i - pos ?j - pos )
