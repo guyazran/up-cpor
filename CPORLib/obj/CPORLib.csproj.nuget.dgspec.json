@@ -1,27 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\CPORLib\\CPORLib.csproj": {}
+    "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj": {}
   },
   "projects": {
-    "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\CPORLib\\CPORLib.csproj": {
+    "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\CPORLib\\CPORLib.csproj",
+        "projectUniqueName": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj",
         "projectName": "CPORLib",
-        "projectPath": "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\CPORLib\\CPORLib.csproj",
-        "packagesPath": "C:\\Users\\shanigu\\.nuget\\packages\\",
-        "outputPath": "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\CPORLib\\obj\\",
+        "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj",
+        "packagesPath": "/Users/guy.azran/.nuget/packages/",
+        "outputPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\shanigu\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/Users/guy.azran/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "netstandard2.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -34,7 +32,13 @@
           "warnAsError": [
             "NU1605"
           ]
-        }
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.200"
       },
       "frameworks": {
         "netstandard2.0": {
@@ -66,7 +70,7 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.203\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/opt/homebrew/Caskroom/miniforge/base/envs/CPOR/lib/dotnet/sdk/9.0.203/RuntimeIdentifierGraph.json"
         }
       }
     }

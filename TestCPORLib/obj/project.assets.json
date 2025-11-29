@@ -1001,34 +1001,32 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\shanigu\\.nuget\\packages\\": {}
+    "/Users/guy.azran/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\TestCPORLib\\RunCPOR.csproj",
+      "projectUniqueName": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/TestCPORLib/RunCPOR.csproj",
       "projectName": "RunCPOR",
-      "projectPath": "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\TestCPORLib\\RunCPOR.csproj",
-      "packagesPath": "C:\\Users\\shanigu\\.nuget\\packages\\",
-      "outputPath": "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\TestCPORLib\\obj\\",
+      "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/TestCPORLib/RunCPOR.csproj",
+      "packagesPath": "/Users/guy.azran/.nuget/packages/",
+      "outputPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/TestCPORLib/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\shanigu\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "/Users/guy.azran/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net6.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "net6.0": {
           "targetAlias": "net6.0",
           "projectReferences": {
-            "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\CPORLib\\CPORLib.csproj": {
-              "projectPath": "D:\\OneDrive\\OneDrive - BGU\\Research\\projects\\AIPlan4EU\\up-cpor\\CPORLib\\CPORLib.csproj"
+            "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj": {
+              "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj"
             }
           }
         }
@@ -1037,7 +1035,13 @@
         "warnAsError": [
           "NU1605"
         ]
-      }
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "9.0.200"
     },
     "frameworks": {
       "net6.0": {
@@ -1063,12 +1067,26 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[6.0.36, 6.0.36]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Host.osx-arm64",
+            "version": "[6.0.36, 6.0.36]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[6.0.36, 6.0.36]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.203\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/opt/homebrew/Caskroom/miniforge/base/envs/CPOR/lib/dotnet/sdk/9.0.203/RuntimeIdentifierGraph.json"
       }
     }
   },

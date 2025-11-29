@@ -111,7 +111,10 @@
           "pythonnet": "3.0.1"
         },
         "runtime": {
-          "CPORLib.dll": {}
+          "CPORLib.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
         }
       }
     }
