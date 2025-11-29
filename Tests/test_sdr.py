@@ -1,3 +1,10 @@
+import os
+# set PYTHONNET_RUNTIME=mono
+os.environ["PYTHONNET_RUNTIME"] = "mono"
+
+# set PYTHONNET_MONO_LIBMONO="$(brew --prefix mono)/lib/libmonosgen-2.0.dylib"
+os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
+
 from unified_planning.io import PDDLReader
 import unified_planning.environment as environment
 from unified_planning.model.contingent.environment import SimulatedEnvironment
@@ -9,7 +16,20 @@ if __name__ == "__main__":
     # Creating a PDDL reader
     reader = PDDLReader()
 
-    prob_arr = ['blocks2', 'doors5', 'wumpus05']
+    prob_arr = [
+        'blocks2',
+        'blocks3',
+        'blocks7',
+        # 'colorballs2-2',  # PDDL parsing fails
+        'doors5',
+        # 'doors15',  # stuck after planning complete
+        'localize5',
+        # 'localize5noisy',  # PDDL parsing fails
+        # 'medpks010',  # PDDL parsing fails
+        'unix1',
+        'wumpus05',
+        # 'wumpus10'  # PDDL parsing fails
+    ]
 
     for prob in prob_arr:
         print(f"###########################Problem: {prob} start###########################")
