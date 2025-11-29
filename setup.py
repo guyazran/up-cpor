@@ -36,7 +36,10 @@ setup(name='up_cpor',
       author_email='shanigu@bgu.ac.il',
       url='',
       packages=['CPORLib', 'up_cpor'],
-      install_requires=['pythonnet==3.0.0'],
+      install_requires=[
+          'pythonnet==3.0.0',
+          'unified_planning @ git+https://github.com/aiplan4eu/unified-planning@action-selector-mixin'
+      ],
       python_requires='>=3.7',
       # package_data={"CPORLib": ["CPORLib/obj/Debug/netstandard2.0/CPORLib.dll"]},
       cmdclass={"install": CustomInstallCommand},
