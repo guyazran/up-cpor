@@ -75,6 +75,7 @@ class CPORImpl(Engine, OneshotPlannerMixin):
         supported_kind.set_problem_class('CONTINGENT')
         supported_kind.set_problem_class("ACTION_BASED")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
+        supported_kind.set_conditions_kind("EQUALITIES")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
         supported_kind.set_typing('FLAT_TYPING')
         supported_kind.set_typing('HIERARCHICAL_TYPING')
@@ -135,6 +136,7 @@ class CPORMetaEngineImpl(MetaEngine, mixins.OneshotPlannerMixin):
         supported_kind.set_problem_class('CONTINGENT')
         supported_kind.set_problem_class("ACTION_BASED")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
+        supported_kind.set_conditions_kind("EQUALITIES")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
         supported_kind.set_typing('FLAT_TYPING')
         supported_kind.set_typing('HIERARCHICAL_TYPING')
@@ -205,6 +207,7 @@ class SDRImpl(Engine, ActionSelectorMixin):
         supported_kind.set_problem_class('CONTINGENT')
         supported_kind.set_problem_class("ACTION_BASED")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
+        supported_kind.set_conditions_kind("EQUALITIES")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
         supported_kind.set_typing('FLAT_TYPING')
         supported_kind.set_typing('HIERARCHICAL_TYPING')
@@ -253,6 +256,5 @@ class SDRImpl(Engine, ActionSelectorMixin):
         c_problem = self.cnv.createProblem(problem, c_domain)
         solver = self.cnv.createSDRSolver(c_domain, c_problem)
         return solver
-
 
 

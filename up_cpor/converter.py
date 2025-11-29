@@ -229,6 +229,8 @@ class UpCporConverter:
             pp = self.__CreatePredicate(n, False, lActionParameters)
             pf = PredicateFormula(pp)
             return pf
+        elif n.node_type == OperatorKind.EQUALS:
+            return self.__CreateEqualityFormula(n)
         else:
             if n.node_type == OperatorKind.AND:
                 cp = CompoundFormula("and")
@@ -245,6 +247,28 @@ class UpCporConverter:
                 fSub = self.__CreateFormula(nSub, lActionParameters)
                 cp.SimpleAddOperand(fSub)
             return cp
+
+    def __CreateEqualityFormula(self, n: FNode) -> Formula:
+        # Equality in UP is an interpreted predicate; model it explicitly so CPOR can reason on it.
+        assert n.node_type == OperatorKind.EQUALS
+
+        has_parameter = any(arg.is_parameter_exp() for arg in n.args)
+        if has_parameter:
+            predicate = ParametrizedPredicate("=")
+        else:
+            predicate = GroundedPredicate("=")
+
+        for arg in n.args:
+            if arg.is_parameter_exp():
+                param = arg.parameter()
+                predicate.AddParameter(param.name, param.type.name)
+            elif arg.is_object_exp():
+                obj = arg.object()
+                predicate.AddConstant(obj.name, obj.type.name)
+            else:
+                raise ValueError(f"Unsupported equality argument: {arg}")
+
+        return PredicateFormula(predicate)
 
     def __CreateOrFormula(self, n, lActionParameters) -> Formula:
         cp = CompoundFormula("or")
