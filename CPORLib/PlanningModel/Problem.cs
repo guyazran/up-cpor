@@ -1507,6 +1507,7 @@ namespace CPORLib.PlanningModel
         {
             if (!Ready)
             {
+                Domain.EnsureConstantsForPredicateTypes();
                 Domain.ComputeAlwaysKnown();
                 CompleteKnownState();
 

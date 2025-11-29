@@ -54,6 +54,10 @@ namespace CPORLib.PlanningModel
             IsSimple = true;
             ContainsNonDeterministicActions = false;
             TypeHierarchy = new Dictionary<string, string>();
+
+            // Ensure the sentinel false predicate is part of the domain so knowledge variants
+            // generated later never reference an undeclared predicate.
+            AddPredicate(Utilities.FALSE_PREDICATE);
         }
 
 
@@ -136,8 +140,36 @@ namespace CPORLib.PlanningModel
             Constant c = new Constant(sType, sName);
             AddConstant(c);
         }
+
+        /// <summary>
+        /// Ensure that every type appearing in predicates has at least one constant.
+        /// This avoids downstream planners inventing undeclared placeholders (e.g., b1).
+        /// </summary>
+        public void EnsureConstantsForPredicateTypes()
+        {
+            HashSet<string> typesNeedingConstants = new HashSet<string>();
+            foreach (Predicate p in Predicates)
+            {
+                if (p is ParametrizedPredicate pp)
+                {
+                    foreach (Parameter param in pp.Parameters)
+                        typesNeedingConstants.Add(param.Type);
+                }
+            }
+            foreach (string t in typesNeedingConstants)
+            {
+                bool hasConstant = Constants.Any(c => c.Type == t);
+                if (!hasConstant)
+                {
+                    AddConstant(new Constant(t, t.ToLower() + "_0"));
+                }
+            }
+        }
         public void AddPredicate(Predicate p)
         {
+            // Avoid duplicating predicate declarations (by name).
+            if (ContainsPredicate(p.Name))
+                return;
             if(p is ParametrizedPredicate pp)
             {
                 ParametrizedPredicate ppNew = new ParametrizedPredicate(pp.Name);
@@ -1938,6 +1970,7 @@ namespace CPORLib.PlanningModel
 
         private void WriteConstants(StreamWriter sw)
         {
+            EnsureConstantsForPredicateTypes();
             sw.WriteLine("(:constants");
             foreach (Constant c in Constants)
                 sw.WriteLine(" " + c.FullString());
@@ -1946,6 +1979,7 @@ namespace CPORLib.PlanningModel
 
         private void WriteConstants(StreamWriter sw, int cMinMishaps, int cMishaps)
         {
+            EnsureConstantsForPredicateTypes();
             sw.WriteLine("(:constants");
             foreach (Constant c in Constants)
                 sw.WriteLine(" " + c.FullString());
@@ -1978,6 +2012,7 @@ namespace CPORLib.PlanningModel
 
         private void WriteConstants(StreamWriter sw, Dictionary<string, ISet<Predicate>> dTags)
         {
+            EnsureConstantsForPredicateTypes();
             sw.WriteLine("(:constants");
             foreach (Constant c in Constants)
                 sw.WriteLine(" " + c.FullString());

@@ -129,15 +129,24 @@ class UpCporConverter:
                 l.append(param.name)
                 pa.AddParameter(param.name, param.type.name)
             if not a.preconditions is None:
+                cf_pre = CompoundFormula("and")
                 for pre in a.preconditions:
                     formula = self.__CreateFormula(pre, l)
-                    pa.Preconditions = formula
+                    cf_pre.SimpleAddOperand(formula)
+                pa.Preconditions = cf_pre
             if not a.effects is None and len(a.effects) > 0:
-                cp = CompoundFormula("and")
+                cf_effects = CompoundFormula("and")
                 for eff in a.effects:
-                    pp = self.__CreatePredicate(eff, False, l)
-                    cp.SimpleAddOperand(pp)
-                pa.Effects = cp
+                    effect_literal = self.__CreatePredicate(eff, False, l)
+                    cond = getattr(eff, "condition", None)
+                    if cond is None or cond.is_true():
+                        cf_effects.SimpleAddOperand(effect_literal)
+                    else:
+                        cf_when = CompoundFormula("when")
+                        cf_when.AddOperand(self.__CreateFormula(cond, l))
+                        cf_when.AddOperand(effect_literal)
+                        cf_effects.SimpleAddOperand(cf_when)
+                pa.Effects = cf_effects
             if type(a) is SensingAction:
                 if not a.observed_fluents is None:
                     for o in a.observed_fluents:
@@ -145,24 +154,43 @@ class UpCporConverter:
                         pa.Observe = pf
 
             d.AddAction(pa)
+        # Guarantee each predicate type has at least one constant before planning.
+        try:
+            d.EnsureConstantsForPredicateTypes()
+        except Exception:
+            pass
         return d
 
     def createActionTree(self, solution, problem) -> ContingentPlanNode:
-        if solution is not None:
-            ai = self.__convert_CPOR_string_to_action_instance(str(solution.Action), problem)
-            if ai:
-                root = ContingentPlanNode(ai)
-                obser = self.__convert_string_to_observation(str(solution.Action), problem)
-                if solution.SingleChild:
-                    root.add_child({}, self.createActionTree(solution.SingleChild, problem))
-                if solution.FalseObservationChild and obser:
+        # CPOR may return nodes with Action=None to denote terminal leaves. Skip them.
+        if solution is None or solution.Action is None or str(solution.Action) == "None":
+            return None
+
+        ai = self.__convert_CPOR_string_to_action_instance(str(solution.Action), problem)
+        if not ai:
+            return None
+
+        root = ContingentPlanNode(ai)
+        obser = self.__convert_string_to_observation(str(solution.Action), problem)
+
+        if solution.SingleChild:
+            child = self.createActionTree(solution.SingleChild, problem)
+            if child:
+                root.add_child({}, child)
+
+        if obser:
+            if solution.FalseObservationChild:
+                child = self.createActionTree(solution.FalseObservationChild, problem)
+                if child:
                     observation = {obser: problem.environment.expression_manager.TRUE()}
-                    root.add_child(observation, self.createActionTree(solution.FalseObservationChild, problem))
-                if solution.TrueObservationChild and obser:
+                    root.add_child(observation, child)
+            if solution.TrueObservationChild:
+                child = self.createActionTree(solution.TrueObservationChild, problem)
+                if child:
                     observation = {obser: problem.environment.expression_manager.FALSE()}
-                    root.add_child(observation, self.createActionTree(solution.TrueObservationChild, problem))
-                return root
-        return None
+                    root.add_child(observation, child)
+
+        return root
 
     def __CreatePredicate(self, f, bAllParameters, lActionParameters) -> ParametrizedPredicate:
         if type(f) is Fluent:
@@ -255,29 +283,51 @@ class UpCporConverter:
         return ActionInstance(action, param)
 
     def __convert_string_to_observation(self, string, problem):
-        if string is not None and string != 'None' and ":observe" in string:
-            ob = string.replace("\n", " ").replace(")", "").replace("(", "").split(":observe ")[1]
-            obs = ob.split(" ")
-            obs = obs[0:2]
-            expr_manager = problem.environment.expression_manager
-            obse = problem.fluent(obs[0])
-            location = tuple(expr_manager.ObjectExp(problem.object(o_name)) for o_name in obs[1:])
-            obresv = expr_manager.FluentExp(obse, location)
-            return obresv
-        return None
+        if string is None or string == 'None' or ":observe" not in string:
+            return None
+
+        # Isolate the observation part after ":observe"
+        observe_part = string.split(":observe", 1)[1]
+        # Strip parentheses and newlines, then split on any whitespace (avoids empty tokens)
+        observe_part = observe_part.replace("(", " ").replace(")", " ").replace("\n", " ")
+        tokens = observe_part.split()
+        if not tokens:
+            return None
+
+        # If the string contains a leading ':' (e.g., ":action ..."), skip everything up to the first symbol
+        if tokens[0].startswith(":"):
+            # drop leading directive tokens (e.g., ":action", action name)
+            while tokens and tokens[0].startswith(":"):
+                tokens.pop(0)
+            if not tokens:
+                return None
+
+        # Handle optional "not" (though the action tree uses separate branches for true/false)
+        if tokens[0] == "not":
+            tokens = tokens[1:]
+
+        fluent_name = tokens[0]
+        obj_names = tokens[1:]
+        expr_manager = problem.environment.expression_manager
+        fluent = problem.fluent(fluent_name)
+        location = tuple(expr_manager.ObjectExp(problem.object(o_name)) for o_name in obj_names)
+        return expr_manager.FluentExp(fluent, location)
 
     def __convert_SDR_string_to_observation(self, string, problem):
         if string is not None and string != 'None':
-            ob = string.replace(")", "").replace("(", "")
-            obs = ob.split(" ")
-            if obs[0] == "not":
-                obs.remove("not")
+            ob = string.replace(")", " ").replace("(", " ")
+            tokens = ob.split()
+            if not tokens:
+                return None
+            boolean = True
+            if tokens[0] == "not":
                 boolean = False
-            else:
-                boolean = True
+                tokens = tokens[1:]
+            if not tokens:
+                return None
             expr_manager = problem.environment.expression_manager
-            obse = problem.fluent(obs[0])
-            location = tuple(expr_manager.ObjectExp(problem.object(o_name)) for o_name in obs[1:])
+            obse = problem.fluent(tokens[0])
+            location = tuple(expr_manager.ObjectExp(problem.object(o_name)) for o_name in tokens[1:])
             obresv = expr_manager.FluentExp(obse, location)
             return {obresv: Bool(boolean)}
         return None
