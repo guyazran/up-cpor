@@ -73,12 +73,22 @@ namespace CPORLib.PlanningModel
         {
             if (f == null)
                 return;
-            foreach (Predicate p in f.GetAllPredicates())
+            // Walk the formula tree directly so every predicate instance is touched,
+            // even if multiple identical predicates appear in different branches.
+            if (f is PredicateFormula pf)
             {
-                if (p is ParametrizedPredicate pp)
-                {
+                if (pf.Predicate is ParametrizedPredicate pp)
                     FixParametersNames(pp);
-                }
+            }
+            else if (f is CompoundFormula cf)
+            {
+                foreach (Formula sub in cf.Operands)
+                    FixParametersNames(sub);
+            }
+            else if (f is ProbabilisticFormula prob)
+            {
+                foreach (Formula sub in prob.Options)
+                    FixParametersNames(sub);
             }
         }
 
