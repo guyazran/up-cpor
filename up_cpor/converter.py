@@ -19,6 +19,7 @@ clr.AddReference(DLL_PATH)
 from CPORLib.PlanningModel import Domain, Problem, ParametrizedAction, PlanningAction, Simulator
 from CPORLib.LogicalUtilities import Predicate, ParametrizedPredicate, GroundedPredicate, PredicateFormula, CompoundFormula, Formula
 from CPORLib.Algorithms import CPORPlanner, SDRPlanner
+from CPORLib.Tools import Utilities
 
 from unified_planning.model import FNode, OperatorKind, Fluent, Effect, SensingAction
 from unified_planning.plans import ActionInstance
@@ -32,6 +33,10 @@ class UpCporConverter:
 
     def createProblem(self, problem, domain):
         p = Problem(problem.name, domain)
+
+        # Ensure the always-true sentinel is present so preconditions containing a
+        # compiled "true" literal don't block reachability.
+        p.AddKnown(Utilities.TRUE_PREDICATE)
 
         for f, v in problem.initial_values.items():
             if v.is_true():
@@ -121,6 +126,8 @@ class UpCporConverter:
         for f in problem.fluents:
             pp = self.__CreatePredicate(f, True, [])
             d.AddPredicate(pp)
+        # Make sure sentinel predicates exist in the domain.
+        d.AddPredicate(Utilities.TRUE_PREDICATE)
 
         for a in problem.actions:
             l = []
@@ -225,6 +232,12 @@ class UpCporConverter:
             return pp
 
     def __CreateFormula(self, n: FNode, lActionParameters) -> Formula:
+        # Handle bare boolean constants early so they don't turn into empty formulas.
+        if n.is_true():
+            return PredicateFormula(Utilities.TRUE_PREDICATE)
+        if n.is_false():
+            return PredicateFormula(Utilities.FALSE_PREDICATE)
+
         if n.node_type == OperatorKind.FLUENT_EXP:
             pp = self.__CreatePredicate(n, False, lActionParameters)
             pf = PredicateFormula(pp)
