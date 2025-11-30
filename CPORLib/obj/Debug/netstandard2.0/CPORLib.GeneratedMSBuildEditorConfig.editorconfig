@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = CPORLib
-build_property.ProjectDir = /Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/
+build_property.ProjectDir = /Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false

@@ -59,3 +59,14 @@ C:/Users/Guy/OneDrive - BGU/Research/projects/AIPlan4EU/up-cpor/CPORLib/obj/Debu
 /Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.sourcelink.json
 /Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.dll
 /Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.pdb
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/bin/Debug/netstandard2.0/CPORLib.deps.json
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/bin/Debug/netstandard2.0/CPORLib.dll
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/bin/Debug/netstandard2.0/CPORLib.pdb
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.csproj.AssemblyReference.cache
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.GeneratedMSBuildEditorConfig.editorconfig
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.AssemblyInfoInputs.cache
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.AssemblyInfo.cs
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.csproj.CoreCompileInputs.cache
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.sourcelink.json
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.dll
+/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/Debug/netstandard2.0/CPORLib.pdb

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CPORLib")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a7d0cdda15f6ad0ef92a7d114be1a9e90d88c70b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5c58e14388e5cb634a9e2ee7ea7dd0bc853705ef")]
 [assembly: System.Reflection.AssemblyProductAttribute("CPORLib")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CPORLib")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

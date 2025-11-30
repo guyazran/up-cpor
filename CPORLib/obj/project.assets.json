@@ -991,11 +991,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj",
+      "projectUniqueName": "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/CPORLib.csproj",
       "projectName": "CPORLib",
-      "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj",
+      "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/CPORLib.csproj",
       "packagesPath": "/Users/guy.azran/.nuget/packages/",
-      "outputPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/obj/",
+      "outputPath": "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/guy.azran/.nuget/NuGet/NuGet.Config"
