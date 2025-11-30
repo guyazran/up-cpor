@@ -2123,14 +2123,20 @@ namespace CPORLib.PlanningModel
         }
         private Dictionary<Parameter, Constant> GetBindings(ParametrizedAction pa, string[] asAction)
         {
+            // Bind each parameter to a constant, allowing subtype constants (e.g., parameter type object_, constant type container).
             if (pa.Parameters.Count > asAction.Length - 1)//last parameter can be theUtilities.TAG of a KW action
                 return null;
             Dictionary<Parameter, Constant> dBindings = new Dictionary<Parameter, Constant>();
             for (int iParameter = 0; iParameter < pa.Parameters.Count; iParameter++)
             {
-                Constant c = new Constant(pa.Parameters[iParameter].Type, asAction[iParameter + 1]);
-                if (!Constants.Contains(c))
+                string sParameterType = pa.Parameters[iParameter].Type;
+                string sConstantName = asAction[iParameter + 1];
+
+                // Find an existing constant whose type is compatible (subtype) with the parameter type.
+                Constant c = Constants.FirstOrDefault(k => k.Name == sConstantName && ParentOf(sParameterType, k.Type));
+                if (c == null)
                     return null;
+
                 dBindings[pa.Parameters[iParameter]] = c;
             }
             return dBindings;
