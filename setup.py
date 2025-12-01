@@ -37,10 +37,10 @@ setup(name='up_cpor',
       url='',
       packages=['CPORLib', 'up_cpor'],
       install_requires=[
-          'pythonnet==3.0.0',
+          'pythonnet<4',
           'unified_planning @ git+https://github.com/guyazran/unified-planning'
       ],
-      python_requires='>=3.7',
+      python_requires='>=3.8',
       # package_data={"CPORLib": ["CPORLib/obj/Debug/netstandard2.0/CPORLib.dll"]},
       cmdclass={"install": CustomInstallCommand},
       license='APACHE'
