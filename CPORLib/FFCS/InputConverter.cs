@@ -145,10 +145,15 @@ namespace CPORLib.FFCS
                 for (int i = 0; i < lSons.Count - 1; i++)
                     lSons[i].next = lSons[i + 1];
 
-                if (lSons.Count == 0)
-                    Console.Write("*");
-
-                n.sons = lSons[0];
+                if (lSons.Count > 0)
+                {
+                    n.sons = lSons[0];
+                }
+                else
+                {
+                    // empty conjunction/disjunction is allowed; leave sons null so downstream treats it as TRUE/FALSE
+                    n.sons = null;
+                }
             }
             else
             { 
