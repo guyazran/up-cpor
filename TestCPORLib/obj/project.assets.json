@@ -1006,11 +1006,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/TestCPORLib/RunCPOR.csproj",
+      "projectUniqueName": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/TestCPORLib/RunCPOR.csproj",
       "projectName": "RunCPOR",
-      "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/TestCPORLib/RunCPOR.csproj",
+      "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/TestCPORLib/RunCPOR.csproj",
       "packagesPath": "/Users/guy.azran/.nuget/packages/",
-      "outputPath": "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/TestCPORLib/obj/",
+      "outputPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/TestCPORLib/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/guy.azran/.nuget/NuGet/NuGet.Config"
@@ -1025,8 +1025,8 @@
         "net6.0": {
           "targetAlias": "net6.0",
           "projectReferences": {
-            "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/CPORLib.csproj": {
-              "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/ViPlanPO/up-cpor/CPORLib/CPORLib.csproj"
+            "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj": {
+              "projectPath": "/Users/guy.azran/Desktop/School/PhD/Code/up-cpor/CPORLib/CPORLib.csproj"
             }
           }
         }
