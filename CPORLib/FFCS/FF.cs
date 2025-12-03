@@ -467,8 +467,9 @@ namespace CPORLib.FFCS
             }
             else
             {
-                BFSSolver bfs = new BFSSolver();
-                var p = bfs.ManualSolve(m_pProblem, m_dDomain, false);
+                // ManualSolve is disabled to avoid interactive fallback.
+                //BFSSolver bfs = new BFSSolver();
+                //var p = bfs.ManualSolve(m_pProblem, m_dDomain, false);
             }
 
             output_planner_info();

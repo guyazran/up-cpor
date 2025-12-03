@@ -261,7 +261,9 @@ namespace CPORLib.Algorithms
 
             BFSSolver solver = new BFSSolver();
 
-            List<Action> lActions = solver.ManualSolve(p, d, true);
+            // ManualSolve is disabled to avoid interactive fallback.
+            //List<Action> lActions = solver.ManualSolve(p, d, true);
+            List<Action> lActions = new List<Action>();
 
 
             List<string> lActionNames = new List<string>();
