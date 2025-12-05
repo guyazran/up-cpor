@@ -38,7 +38,8 @@ setup(name='up_cpor',
       packages=['CPORLib', 'up_cpor'],
       install_requires=[
           'pythonnet<4',
-          'unified_planning @ git+https://github.com/guyazran/unified-planning'
+          'unified_planning @ git+https://github.com/guyazran/unified-planning',
+          "timeout-decorator"
       ],
       python_requires='>=3.8',
       # package_data={"CPORLib": ["CPORLib/obj/Debug/netstandard2.0/CPORLib.dll"]},

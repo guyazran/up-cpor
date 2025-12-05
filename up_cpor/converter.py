@@ -39,9 +39,11 @@ class UpCporConverter:
         p.AddKnown(Utilities.TRUE_PREDICATE)
 
         for f, v in problem.initial_values.items():
+            gp = self.__CreatePredicate(f, False, None)
             if v.is_true():
-                gp = self.__CreatePredicate(f, False, None)
                 p.AddKnown(gp)
+            elif v.is_false():
+                p.AddKnown(gp.Negate())
 
         for c in problem.or_constraints:
             cf = self.__CreateOrFormula(c, [])
