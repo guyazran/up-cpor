@@ -1022,7 +1022,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.200"
+      "SdkAnalysisLevel": "10.0.100"
     },
     "frameworks": {
       "netstandard2.0": {
@@ -1054,7 +1054,7 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
-        "runtimeIdentifierGraphPath": "/opt/homebrew/Caskroom/miniforge/base/envs/CPOR/lib/dotnet/sdk/9.0.203/RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/opt/homebrew/Caskroom/miniforge/base/envs/newup312/lib/dotnet/sdk/10.0.100/RuntimeIdentifierGraph.json"
       }
     }
   },
