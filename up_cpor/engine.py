@@ -104,7 +104,10 @@ class CPORImpl(Engine, OneshotPlannerMixin):
         c_domain = self.cnv.createDomain(problem)
         c_problem = self.cnv.createProblem(problem, c_domain)
 
-        solution = self.cnv.createCPORPlan(c_domain, c_problem)
+        solution, timed_out = self.cnv.createCPORPlan(c_domain, c_problem, timeout=timeout)
+        if timed_out:
+            return PlanGenerationResult(PlanGenerationResultStatus.TIMEOUT, None, self.name)
+
         actions = self.cnv.createActionTree(solution, problem)
         if solution is None or actions is None:
             return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
@@ -174,7 +177,10 @@ class CPORMetaEngineImpl(MetaEngine, mixins.OneshotPlannerMixin):
         c_domain = self.cnv.createDomain(problem)
         c_problem = self.cnv.createProblem(problem, c_domain)
 
-        solution = self.cnv.createCPORPlan(c_domain, c_problem)
+        solution, timed_out = self.cnv.createCPORPlan(c_domain, c_problem, timeout=timeout)
+        if timed_out:
+            return PlanGenerationResult(PlanGenerationResultStatus.TIMEOUT, None, self.name)
+
         actions = self.cnv.createActionTree(solution, problem)
 
         if solution is None or actions is None:
@@ -221,7 +227,9 @@ class SDRImpl(Engine, ActionSelectorMixin):
     def get_credits(**kwargs) -> Optional["Credits"]:
         return SDRCredits
 
-    def _solve(self, problem: AbstractProblem) -> 'PlanGenerationResult':
+    def _solve(self,
+               problem: AbstractProblem,
+               timeout: Optional[float] = None) -> 'PlanGenerationResult':
 
         assert isinstance(problem, ContingentProblem)
 
@@ -230,7 +238,10 @@ class SDRImpl(Engine, ActionSelectorMixin):
 
         c_domain = self.cnv.createDomain(problem)
         c_problem = self.cnv.createProblem(problem, c_domain)
-        self.solver, solution = self.cnv.createSDRPlan(c_domain, c_problem)
+        self.solver, solution, timed_out = self.cnv.createSDRPlan(c_domain, c_problem, timeout=timeout)
+
+        if timed_out:
+            return PlanGenerationResult(PlanGenerationResultStatus.TIMEOUT, None, self.name)
 
         if not self.bOnline:
             actions = self.cnv.createActionTree(solution, problem)
@@ -256,5 +267,3 @@ class SDRImpl(Engine, ActionSelectorMixin):
         c_problem = self.cnv.createProblem(problem, c_domain)
         solver = self.cnv.createSDRSolver(c_domain, c_problem)
         return solver
-
-

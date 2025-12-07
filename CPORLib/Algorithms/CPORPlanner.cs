@@ -27,7 +27,7 @@ namespace CPORLib.Algorithms
         //public static TextWriterTraceListener TraceListener = new TextWriterTraceListener("debug2.log");
         public static TextWriterTraceListener TraceListener = new TextWriterTraceListener();
 
-        public ConditionalPlanTreeNode OfflinePlanning()
+        public ConditionalPlanTreeNode OfflinePlanning(TimeSpan? timeout = null)
         {
             try
             {
@@ -37,6 +37,10 @@ namespace CPORLib.Algorithms
 
                 Dictionary<PartiallySpecifiedState, PartiallySpecifiedState> dAlreadyVisitedStates = new Dictionary<PartiallySpecifiedState, PartiallySpecifiedState>(new PartiallySpecifiedState_IEqualityComparer());
                 DateTime dtStart = DateTime.Now;
+                TimeSpan? planningTimeout = null;
+                if (timeout.HasValue && timeout.Value.TotalMilliseconds > 0)
+                    planningTimeout = timeout;
+
                 BeliefState bsInitial = Problem.GetInitialBelief();
                 CPORStack<PartiallySpecifiedState> stateStack = new CPORStack<PartiallySpecifiedState>();
                 int cActions = 0;
@@ -66,6 +70,9 @@ namespace CPORLib.Algorithms
 
                 while (!bDone)
                 {
+                    if (planningTimeout.HasValue && DateTime.Now - dtStart > planningTimeout.Value)
+                        throw new TimeoutException("Offline planning timed out.");
+
                     //if (cPlanning == 3)
                     //   return null;
 

@@ -147,7 +147,7 @@ namespace CPORLib.Algorithms
             return true;
         }
 
-        public bool OnlineReplanning()
+        public bool OnlineReplanning(TimeSpan? timeout = null)
         {
             Console.WriteLine("Started online replanning for " + Domain.Name + ", " + DateTime.Now);
 
@@ -192,8 +192,13 @@ namespace CPORLib.Algorithms
 
             bool bPlanEndedSuccessfully = false, bGoalReached = false, bDeadEndReached = false;
             DateTime dtStart = DateTime.Now;
+            TimeSpan? planningTimeout = null;
+            if (timeout.HasValue && timeout.Value.TotalMilliseconds > 0)
+                planningTimeout = timeout;
             while (!bGoalReached && !bDeadEndReached)
             {
+                if (planningTimeout.HasValue && DateTime.Now - dtStart > planningTimeout.Value)
+                    throw new TimeoutException("Online replanning timed out.");
                 State sChosen = null;
 
                 if (StuckInLoopPlanBased(cActions, pssCurrent, lExecutedPlans))
@@ -223,7 +228,12 @@ namespace CPORLib.Algorithms
                                 Domain.Name + ": " + cActions + "/" + lPlan.Count + ", memory:" + Process.GetCurrentProcess().PrivateMemorySize64 / 1000000 + "MB        ");
                             Debug.WriteLine("");
                             TimeSpan ts = DateTime.Now - dtStart;
-                            if (ts.TotalMinutes > 60)
+                            if (planningTimeout.HasValue)
+                            {
+                                if (ts > planningTimeout.Value)
+                                    throw new TimeoutException("Online replanning timed out.");
+                            }
+                            else if (ts.TotalMinutes > 60)
                                 throw new Exception("Execution taking too long");
                             Debug.WriteLine((int)(ts.TotalMinutes) + "," + cActions + ") " + Domain.Name + ", executing action " + sAction);
 

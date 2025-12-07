@@ -27,7 +27,7 @@ from unified_planning.plans.contingent_plan import ContingentPlanNode
 import unified_planning as up
 from unified_planning.shortcuts import Bool
 
-from typing import Dict
+from typing import Dict, Optional
 
 class UpCporConverter:
 
@@ -59,15 +59,29 @@ class UpCporConverter:
 
         return p
 
-    def createCPORPlan(self, c_domain, c_problem):
+    def createCPORPlan(self, c_domain, c_problem, timeout: Optional[float] = None):
         solver = CPORPlanner(c_domain, c_problem)
-        c_plan = solver.OfflinePlanning()
-        return c_plan
+        timeout_span = self.__to_timespan(timeout)
+        try:
+            if timeout_span is not None:
+                c_plan = solver.OfflinePlanning(timeout_span)
+            else:
+                c_plan = solver.OfflinePlanning()
+        except System.TimeoutException:
+            return None, True
+        return c_plan, False
 
-    def createSDRPlan(self, c_domain, c_problem):
+    def createSDRPlan(self, c_domain, c_problem, timeout: Optional[float] = None):
         solver = SDRPlanner(c_domain, c_problem)
-        c_plan = solver.OnlineReplanning()
-        return solver, c_plan
+        timeout_span = self.__to_timespan(timeout)
+        try:
+            if timeout_span is not None:
+                c_plan = solver.OnlineReplanning(timeout_span)
+            else:
+                c_plan = solver.OnlineReplanning()
+        except System.TimeoutException:
+            return solver, None, True
+        return solver, c_plan, False
 
     def createSDRSolver(self, c_domain, c_problem):
         solver = SDRPlanner(c_domain, c_problem)
@@ -368,3 +382,13 @@ class UpCporConverter:
             obresv = expr_manager.FluentExp(obse, location)
             return {obresv: Bool(boolean)}
         return None
+
+    def __to_timespan(self, timeout: Optional[float]):
+        if timeout is None:
+            return None
+        try:
+            if timeout <= 0:
+                return None
+            return System.TimeSpan.FromSeconds(float(timeout))
+        except Exception:
+            return None
