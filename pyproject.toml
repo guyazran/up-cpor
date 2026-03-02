@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "up_cpor"
+dynamic = ["version"]
+description = "up_cpor"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.7"
+authors = [
+    { name = "BGU CPOR Development Team", email = "shanigu@bgu.ac.il" },
+]
+dependencies = [
+    "pythonnet==3.0.5",
+    "unified-planning @ git+https://github.com/aiplan4eu/unified-planning@3a973b7d4762045d582431de87e0b89716f57e79",
+    "pysmt",
+    "z3-solver",
+]
+
+[tool.setuptools]
+packages = ["CPORLib", "up_cpor"]
+
+[tool.setuptools.dynamic]
+version = { attr = "up_cpor.__version__" }
