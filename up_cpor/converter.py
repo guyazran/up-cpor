@@ -20,7 +20,8 @@ from CPORLib.PlanningModel import Domain, Problem, ParametrizedAction, PlanningA
 from CPORLib.LogicalUtilities import Predicate, ParametrizedPredicate, GroundedPredicate, PredicateFormula, CompoundFormula, Formula
 from CPORLib.Algorithms import CPORPlanner, SDRPlanner
 
-from unified_planning.model import FNode, OperatorKind, Fluent, Effect, SensingAction
+from unified_planning.model import FNode, OperatorKind, Fluent, Effect
+from unified_planning.model.contingent import SensingAction
 from unified_planning.plans import ActionInstance
 from unified_planning.plans.contingent_plan import ContingentPlanNode
 import unified_planning as up
