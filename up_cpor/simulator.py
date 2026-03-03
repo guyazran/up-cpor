@@ -1,10 +1,10 @@
 import unified_planning as up
 from typing import Dict
-from unified_planning.model.contingent.environment import Environment
+from unified_planning.model.contingent import ExecutionEnvironment
 
 from up_cpor.converter import UpCporConverter
 
-class SDRSimulator(Environment):
+class SDRSimulator(ExecutionEnvironment):
 
     def __init__(
         self, problem: "up.model.contingent.contingent_problem.ContingentProblem"

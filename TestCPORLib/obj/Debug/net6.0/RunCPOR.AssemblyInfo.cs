@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RunCPOR")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e37ce5cbcb84396b3c6f22b0366c6d9b086fd64d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+35ef077a57753ca226fcc1541e57c01b40927137")]
 [assembly: System.Reflection.AssemblyProductAttribute("RunCPOR")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RunCPOR")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
