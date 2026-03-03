@@ -27,3 +27,6 @@ packages = ["CPORLib", "up_cpor"]
 
 [tool.setuptools.dynamic]
 version = { attr = "up_cpor.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["Tests"]
