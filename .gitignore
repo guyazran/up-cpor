@@ -4,3 +4,13 @@
 
 /‏‏CPOR/obj/x86/Debug
 /‏‏CPOR/bin/Debug
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Copied DLL (built artifact)
+up_cpor/CPORLib.dll
