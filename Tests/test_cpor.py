@@ -1,9 +1,14 @@
 import os
-# set PYTHONNET_RUNTIME=mono
-os.environ["PYTHONNET_RUNTIME"] = "mono"
+import sys
 
-# set PYTHONNET_MONO_LIBMONO="$(brew --prefix mono)/lib/libmonosgen-2.0.dylib"
-os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
+# Set environment variables for Python.NET on macOS
+# using the Mono runtime installed via Homebrew
+if sys.platform == "darwin":
+    # set PYTHONNET_RUNTIME=mono
+    os.environ["PYTHONNET_RUNTIME"] = "mono"
+
+    # set PYTHONNET_MONO_LIBMONO="$(brew --prefix mono)/lib/libmonosgen-2.0.dylib"
+    os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
 
 from unified_planning.io import PDDLReader
 import unified_planning.environment as environment
