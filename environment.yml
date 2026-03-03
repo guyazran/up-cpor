@@ -1,0 +1,13 @@
+name: cpor
+channels:
+  - conda-forge
+dependencies:
+  - dotnet
+  - mono
+  - python=3.12
+  - pip:
+    - .[dev]
+    - up-tamer
+    - up-pyperplan
+
+prefix: "/home/codespace/miniforge3/envs/cpor"

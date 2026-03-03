@@ -19,6 +19,9 @@ dependencies = [
     "z3-solver",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest"]
+
 [tool.setuptools]
 packages = ["CPORLib", "up_cpor"]
 
