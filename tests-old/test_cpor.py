@@ -12,7 +12,7 @@ if sys.platform == "darwin":
 
 from unified_planning.io import PDDLReader
 import unified_planning.environment as environment
-from unified_planning.model.contingent import SimulatedExecutionEnvironment
+from unified_planning.engines.results import PlanGenerationResultStatus
 from unified_planning.shortcuts import *
 
 
@@ -24,33 +24,34 @@ if __name__ == "__main__":
     prob_arr = [
         'blocks2',
         'blocks3',
-        'blocks7',
-        # 'colorballs2-2',  # PDDL parsing fails
+        # 'blocks7',  # arity error
+        # 'colorballs2-2',  # arity error
         'doors5',
-        # 'doors15',  # stuck after planning complete
-        'localize5',
+        # 'doors15',  # hang after "done planning"
+        # 'localize5',  # no plan found, even though a plan exists
         # 'localize5noisy',  # PDDL parsing fails
         # 'medpks010',  # PDDL parsing fails
-        'unix1',
+        # 'unix1',  # arity error
         'wumpus05',
-        # 'wumpus10'  # PDDL parsing fails
-    ]
+        # 'wumpus10'  # hangs on infinite planning loop
+    ]  
 
     for prob in prob_arr:
         print(f"###########################Problem: {prob} start###########################")
         # Parsing a PDDL problem from file
         problem = reader.parse_problem(
-            f"../Tests/{prob}/d.pddl",
-            f"../Tests/{prob}/p.pddl"
+            f"../tests-old/{prob}/d.pddl",
+            f"../tests-old/{prob}/p.pddl"
         )
 
         env = environment.get_environment()
-        env.factory.add_engine('SDRPlanning', 'up_cpor.engine', 'SDRImpl')
+        env.factory.add_engine('CPORPlanning', 'up_cpor.engine', 'CPORImpl')
 
-        with ActionSelector(name='SDRPlanning', problem=problem) as solver:
-            simulatedEnv = SimulatedExecutionEnvironment(problem)
-            while not simulatedEnv.is_goal_reached():
-                action = solver.get_action()
-                observation = simulatedEnv.apply(action)
-                solver.update(observation)
-
+        with OneshotPlanner(name='CPORPlanning') as planner:
+            result = planner.solve(problem)
+            if result.status == PlanGenerationResultStatus.SOLVED_SATISFICING:
+                print(f'{planner.name} found a valid plan!')
+                print(f'Success')
+            else:
+                print('No plan found!')
+                assert False, f'Failed on problem {prob}'
