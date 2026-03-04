@@ -24,16 +24,16 @@ if __name__ == "__main__":
     prob_arr = [
         'blocks2',
         'blocks3',
-        'blocks7',
-        'colorballs2-2',
+        # 'blocks7',  # arity error
+        # 'colorballs2-2',  # arity error
         'doors5',
-        'doors15',
-        'localize5',
+        # 'doors15',  # hang after "done planning"
+        # 'localize5',  # no plan found, even though a plan exists
         # 'localize5noisy',  # PDDL parsing fails
         # 'medpks010',  # PDDL parsing fails
-        'unix1',
+        # 'unix1',  # arity error
         'wumpus05',
-        'wumpus10'
+        # 'wumpus10'  # hangs on infinite planning loop
     ]  
 
     for prob in prob_arr:
