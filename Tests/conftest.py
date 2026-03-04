@@ -1,6 +1,9 @@
 import sys
 import os
 import re
+import subprocess
+import json
+import tempfile
 from collections import defaultdict
 
 import pytest
@@ -17,7 +20,8 @@ from unified_planning.shortcuts import get_environment
 
 TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# All problems that PDDLReader can load (listed in test_cpor.py, not commented out)
+# All problems that PDDLReader can load (listed in test_cpor.py, not commented out).
+# This is the single canonical problem list used by ALL planners.
 CPOR_PROBLEMS = [
     "blocks2",
     "blocks3",
@@ -31,31 +35,21 @@ CPOR_PROBLEMS = [
     "wumpus10",
 ]
 
-# Problems from the original test_sdr.py (SimulatedExecutionEnvironment)
-SDR_PROBLEMS = [
-    "blocks2",
-    "blocks3",
-    "blocks7",
-    "doors5",
-    "localize5",
-    "unix1",
-    "wumpus05",
-]
+# Timeout in seconds for planner invocations that may hang due to bugs.
+PLANNER_TIMEOUT = 120
 
-# Problems from the original test_sdr_simulator.py (SDRSimulator)
-SDR_SIMULATOR_PROBLEMS = [
-    "blocks2",
-    "doors5",
-    "wumpus05",
-]
-
-# Problems from the original test_meta_cpor.py
-META_CPOR_PROBLEMS = [
-    "blocks2",
-    "blocks3",
-    "doors5",
-    "wumpus05",
-]
+# Preamble that removes the repo root from sys.path before importing
+# pythonnet-based modules, preventing the CPORLib directory from
+# shadowing the C# DLL namespace.
+_SUBPROCESS_PREAMBLE = f"""\
+import sys, os
+repo_root = {REPO_ROOT!r}
+# Remove the repo root (and CWD aliases) from sys.path so the CPORLib/
+# source directory does not shadow the C# DLL namespace via pythonnet.
+for _p in [repo_root, '', '.', os.getcwd()]:
+    while _p in sys.path:
+        sys.path.remove(_p)
+"""
 
 
 @pytest.fixture(autouse=True)
@@ -79,6 +73,40 @@ def _clean_sys_path():
         sys.path.remove(REPO_ROOT)
 
 
+def _run_subprocess(script, result_file, timeout=PLANNER_TIMEOUT):
+    """Run a Python script in a subprocess with a timeout.
+
+    The subprocess is killed if it exceeds *timeout* seconds.  This
+    provides reliable timeout behaviour even when the C# planner (via
+    pythonnet/mono) blocks in native code that cannot be interrupted by
+    Python signals or threads.
+
+    The script must write its result to *result_file*.  Stdout/stderr
+    are discarded (the C# planner prints progress information there).
+    Raises ``pytest.fail`` on timeout or non-zero exit.
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        pytest.fail(
+            f"Timed out after {timeout}s (planner is hanging — likely a bug)"
+        )
+    if result.returncode != 0:
+        # Combine stdout+stderr so we see C# errors too
+        combined = (result.stdout + "\n" + result.stderr)[-3000:]
+        pytest.fail(
+            f"Planner subprocess failed (exit {result.returncode}):\n"
+            f"{combined}"
+        )
+    if not os.path.exists(result_file):
+        pytest.fail("Planner subprocess did not produce a result file")
+
+
 def load_problem(problem_name):
     """Load a PDDL problem from the Tests directory."""
     reader = PDDLReader()
@@ -94,6 +122,151 @@ def read_expected_output(problem_name):
         return None
     with open(out_path) as f:
         return f.read()
+
+
+def run_cpor_get_dot(problem_name, timeout=PLANNER_TIMEOUT):
+    """Run the CPOR planner in a subprocess and return the DOT output string.
+
+    Returns ``None`` when the planner finds no solution.
+    """
+    result_file = tempfile.mktemp(suffix=".json")
+    dot_file = tempfile.mktemp(suffix=".dot")
+    script = _SUBPROCESS_PREAMBLE + f"""\
+import json
+from unified_planning.io import PDDLReader
+from up_cpor.converter import UpCporConverter
+from CPORLib.Algorithms import CPORPlanner
+
+tests_dir = {TESTS_DIR!r}
+reader = PDDLReader()
+problem = reader.parse_problem(
+    os.path.join(tests_dir, {problem_name!r}, "d.pddl"),
+    os.path.join(tests_dir, {problem_name!r}, "p.pddl"),
+)
+cnv = UpCporConverter()
+c_domain = cnv.createDomain(problem)
+c_problem = cnv.createProblem(problem, c_domain)
+solver = CPORPlanner(c_domain, c_problem)
+c_plan = solver.OfflinePlanning()
+if c_plan is None:
+    with open({result_file!r}, "w") as f:
+        json.dump({{"has_plan": False}}, f)
+else:
+    solver.WritePlan({dot_file!r}, c_plan)
+    with open({dot_file!r}) as f:
+        dot_text = f.read()
+    os.unlink({dot_file!r})
+    with open({result_file!r}, "w") as f:
+        json.dump({{"has_plan": True, "dot": dot_text}}, f)
+"""
+    try:
+        _run_subprocess(script, result_file, timeout=timeout)
+        with open(result_file) as f:
+            data = json.load(f)
+        if not data["has_plan"]:
+            return None
+        return data["dot"]
+    finally:
+        for p in (result_file, dot_file):
+            if os.path.exists(p):
+                os.unlink(p)
+
+
+def run_engine_api(problem_name, engine_module, engine_class, engine_name,
+                   timeout=PLANNER_TIMEOUT, meta_engine=False,
+                   planner_name=None):
+    """Run a planner through the UP engine API in a subprocess.
+
+    Returns a dict with keys ``status`` and ``has_plan``.
+    """
+    result_file = tempfile.mktemp(suffix=".json")
+    add_method = "add_meta_engine" if meta_engine else "add_engine"
+    if planner_name is None:
+        planner_name = engine_name
+    script = _SUBPROCESS_PREAMBLE + f"""\
+import json
+from unified_planning.io import PDDLReader
+import unified_planning.environment as environment
+from unified_planning.shortcuts import OneshotPlanner
+
+tests_dir = {TESTS_DIR!r}
+reader = PDDLReader()
+problem = reader.parse_problem(
+    os.path.join(tests_dir, {problem_name!r}, "d.pddl"),
+    os.path.join(tests_dir, {problem_name!r}, "p.pddl"),
+)
+env = environment.get_environment()
+env.factory.{add_method}({engine_name!r}, {engine_module!r}, {engine_class!r})
+
+with OneshotPlanner(name={planner_name!r}) as planner:
+    result = planner.solve(problem)
+    with open({result_file!r}, "w") as f:
+        json.dump({{
+            "status": str(result.status),
+            "has_plan": result.plan is not None,
+        }}, f)
+"""
+    try:
+        _run_subprocess(script, result_file, timeout=timeout)
+        with open(result_file) as f:
+            return json.load(f)
+    finally:
+        if os.path.exists(result_file):
+            os.unlink(result_file)
+
+
+def run_sdr_simulation(problem_name, use_sdr_simulator=False,
+                       max_steps=500, timeout=PLANNER_TIMEOUT):
+    """Run the SDR online simulation in a subprocess.
+
+    Returns a dict with keys ``goal_reached`` and ``steps``.
+    """
+    result_file = tempfile.mktemp(suffix=".json")
+    if use_sdr_simulator:
+        env_setup = "from up_cpor.simulator import SDRSimulator\n    simulated_env = SDRSimulator(problem)"
+    else:
+        env_setup = "from unified_planning.model.contingent import SimulatedExecutionEnvironment\n    simulated_env = SimulatedExecutionEnvironment(problem)"
+
+    script = _SUBPROCESS_PREAMBLE + f"""\
+import json
+from unified_planning.io import PDDLReader
+import unified_planning.environment as environment
+from unified_planning.shortcuts import ActionSelector
+
+tests_dir = {TESTS_DIR!r}
+reader = PDDLReader()
+problem = reader.parse_problem(
+    os.path.join(tests_dir, {problem_name!r}, "d.pddl"),
+    os.path.join(tests_dir, {problem_name!r}, "p.pddl"),
+)
+env = environment.get_environment()
+env.factory.add_engine("SDRPlanning", "up_cpor.engine", "SDRImpl")
+
+with ActionSelector(name="SDRPlanning", problem=problem) as solver:
+    {env_setup}
+    steps = 0
+    while not simulated_env.is_goal_reached():
+        action = solver.get_action()
+        observation = simulated_env.apply(action)
+        solver.update(observation)
+        steps += 1
+        if steps > {max_steps}:
+            with open({result_file!r}, "w") as f:
+                json.dump({{"goal_reached": False, "steps": steps,
+                           "error": "exceeded max steps"}}, f)
+            raise SystemExit(0)
+
+goal_reached = simulated_env.is_goal_reached()
+with open({result_file!r}, "w") as f:
+    json.dump({{"goal_reached": goal_reached, "steps": steps}}, f)
+"""
+    try:
+        _run_subprocess(script, result_file, timeout=timeout)
+        with open(result_file) as f:
+            return json.load(f)
+    finally:
+        if os.path.exists(result_file):
+            os.unlink(result_file)
 
 
 def normalize_dot(dot_text):

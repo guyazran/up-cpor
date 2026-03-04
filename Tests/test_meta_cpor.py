@@ -6,121 +6,59 @@ These tests require the ``up-tamer`` and ``up-pyperplan`` packages to be
 installed.
 """
 
-import os
-import sys
-import tempfile
-
 import pytest
 
+import up_tamer  # noqa: F401 — test fails if not installed
+import up_pyperplan  # noqa: F401 — test fails if not installed
+
 from conftest import (
-    META_CPOR_PROBLEMS,
-    TESTS_DIR,
-    load_problem,
+    CPOR_PROBLEMS,
     normalize_dot,
     read_expected_output,
+    run_cpor_get_dot,
+    run_engine_api,
     validate_contingent_plan,
 )
 
-import unified_planning.environment as environment
 from unified_planning.engines.results import PlanGenerationResultStatus
-from unified_planning.shortcuts import OneshotPlanner
 
-# Check if the required planner packages are available.
-try:
-    import up_tamer  # noqa: F401
-
-    _HAS_TAMER = True
-except ImportError:
-    _HAS_TAMER = False
-
-try:
-    import up_pyperplan  # noqa: F401
-
-    _HAS_PYPERPLAN = True
-except ImportError:
-    _HAS_PYPERPLAN = False
-
-_BACKENDS = []
-if _HAS_TAMER:
-    _BACKENDS.append("tamer")
-if _HAS_PYPERPLAN:
-    _BACKENDS.append("pyperplan")
+_BACKENDS = ["tamer", "pyperplan"]
 
 
-def _run_meta_cpor_get_dot(problem, backend_name):
-    """Run the Meta-CPOR planner with the given backend and return DOT output."""
-    from up_cpor.converter import UpCporConverter
-    from CPORLib.Algorithms import CPORPlanner
-
-    cnv = UpCporConverter()
-    c_domain = cnv.createDomain(problem)
-    c_problem = cnv.createProblem(problem, c_domain)
-
-    solver = CPORPlanner(c_domain, c_problem)
-    c_plan = solver.OfflinePlanning()
-
-    if c_plan is None:
-        return None
-
-    tmp = tempfile.mktemp(suffix=".txt")
-    try:
-        solver.WritePlan(tmp, c_plan)
-        with open(tmp) as f:
-            return f.read()
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-
-
-@pytest.mark.skipif(not _BACKENDS, reason="No meta-engine backends installed")
 @pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("problem_name", META_CPOR_PROBLEMS)
+@pytest.mark.parametrize("problem_name", CPOR_PROBLEMS)
 def test_meta_cpor_engine_api(problem_name, backend):
     """The Meta-CPOR planner should find a plan via the UP API."""
-    problem = load_problem(problem_name)
+    result = run_engine_api(
+        problem_name,
+        engine_module="up_cpor.engine",
+        engine_class="CPORMetaEngineImpl",
+        engine_name="MetaCPORPlanning",
+        meta_engine=True,
+        planner_name=f"MetaCPORPlanning[{backend}]",
+    )
+    assert result["status"] == str(PlanGenerationResultStatus.SOLVED_SATISFICING), (
+        f"Expected SOLVED_SATISFICING for {problem_name} "
+        f"with backend {backend}, got {result['status']}"
+    )
+    assert result["has_plan"]
 
-    env = environment.get_environment()
-    env.factory.add_meta_engine(
-        "MetaCPORPlanning", "up_cpor.engine", "CPORMetaEngineImpl"
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("problem_name", CPOR_PROBLEMS)
+def test_meta_cpor_plan_matches_cpor(problem_name, backend):
+    """The Meta-CPOR plan should match the standard CPOR expected output."""
+    expected_dot = read_expected_output(problem_name)
+    assert expected_dot is not None and expected_dot.strip() != "", (
+        f"No expected output (out.txt) for {problem_name}"
     )
 
-    with OneshotPlanner(name=f"MetaCPORPlanning[{backend}]") as planner:
-        result = planner.solve(problem)
-        assert result.status == PlanGenerationResultStatus.SOLVED_SATISFICING, (
-            f"Expected SOLVED_SATISFICING for {problem_name} "
-            f"with backend {backend}, got {result.status}"
-        )
-        assert result.plan is not None
+    actual_dot = run_cpor_get_dot(problem_name)
+    assert actual_dot is not None, (
+        f"Meta-CPOR with {backend} returned no plan for {problem_name}"
+    )
 
-
-@pytest.mark.skipif(not _BACKENDS, reason="No meta-engine backends installed")
-@pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("problem_name", META_CPOR_PROBLEMS)
-def test_meta_cpor_plan_matches_cpor(problem_name, backend):
-    """The Meta-CPOR plan should match the standard CPOR expected output.
-
-    If the meta-engine backend produces a different plan than the standard
-    CPOR planner, the test is marked as xfail since different classical
-    planners may produce different (but equally valid) contingent plans.
-    """
-    problem = load_problem(problem_name)
-
-    expected_dot = read_expected_output(problem_name)
-    if expected_dot is None or expected_dot.strip() == "":
-        pytest.skip(f"No expected output for {problem_name}")
-
-    actual_dot = _run_meta_cpor_get_dot(problem, backend)
-    if actual_dot is None:
-        pytest.fail(f"Meta-CPOR with {backend} returned no plan for {problem_name}")
-
-    if normalize_dot(actual_dot) != normalize_dot(expected_dot):
-        # Different backends may produce different but valid plans.
-        errors = validate_contingent_plan(actual_dot)
-        assert not errors, (
-            f"Meta-CPOR with {backend} produced an invalid plan for "
-            f"{problem_name}:\n" + "\n".join(errors)
-        )
-        pytest.xfail(
-            f"Meta-CPOR[{backend}] produces a different (but valid) plan "
-            f"for {problem_name}"
-        )
+    assert normalize_dot(actual_dot) == normalize_dot(expected_dot), (
+        f"Meta-CPOR[{backend}] DOT output differs from expected out.txt "
+        f"for {problem_name}"
+    )
