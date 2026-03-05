@@ -1,0 +1,85 @@
+import os
+import sys
+from pathlib import Path
+
+import pytest
+from unified_planning.io import PDDLReader
+from unified_planning.plans import ActionInstance
+
+from up_cpor.simulator import SDRSimulator
+from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
+
+# Set environment variables for Python.NET on macOS
+# using the Mono runtime installed via Homebrew.
+if sys.platform == "darwin":
+    os.environ["PYTHONNET_RUNTIME"] = "mono"
+    os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
+
+TESTS_DIR = Path(__file__).resolve().parent
+DOMAINS = ("blocks2", "blocks3", "doors5")
+
+SCRIPTED_ACTIONS = {
+    "blocks2": [
+        ("senseclear", ("b1",)),
+        ("senseon", ("b2", "b1")),
+        ("senseontable", ("b2",)),
+    ],
+    "blocks3": [
+        ("senseclear", ("b3",)),
+        ("senseclear", ("b2",)),
+        ("senseon", ("b3", "b2")),
+    ],
+    "doors5": [
+        ("sense-door", ("p1-3", "p1-2")),
+        ("sense-door", ("p1-3", "p2-3")),
+    ],
+}
+
+CHECK_GOAL = {"blocks2": True, "blocks3": False, "doors5": True}
+
+
+def _parse_problem(domain: str):
+    reader = PDDLReader()
+    domain_dir = TESTS_DIR / domain
+    return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
+
+
+def _make_action_instance(problem, action_name: str, obj_names):
+    action = problem.action(action_name)
+    expr_manager = problem.environment.expression_manager
+    params = tuple(expr_manager.ObjectExp(problem.object(name)) for name in obj_names)
+    return ActionInstance(action, params)
+
+
+def _run_scripted_simulator_trace(problem, domain: str):
+    reset_sdr_seeds(0)
+
+    simulator = SDRSimulator(problem)
+    trace = []
+    goal_before = None
+    goal_after = None
+
+    if CHECK_GOAL[domain]:
+        goal_before = simulator.is_goal_reached()
+        assert isinstance(goal_before, bool), "SDRSimulator.is_goal_reached() must return bool."
+
+    for action_name, obj_names in SCRIPTED_ACTIONS[domain]:
+        action = _make_action_instance(problem, action_name, obj_names)
+        observation = simulator.apply(action)
+        normalized = normalize_observation(observation)
+        assert normalized is None or isinstance(normalized, list), "Observation normalization returned invalid type."
+        trace.append({"action": str(action), "observation": normalized})
+
+    if CHECK_GOAL[domain]:
+        goal_after = simulator.is_goal_reached()
+        assert isinstance(goal_after, bool), "SDRSimulator.is_goal_reached() must return bool."
+
+    return {"goal_before": goal_before, "goal_after": goal_after, "steps": len(trace), "trace": trace}
+
+
+@pytest.mark.parametrize("domain", DOMAINS)
+def test_sdr_simulator_scripted_trace_matches_snapshot(domain: str):
+    problem = _parse_problem(domain)
+    actual = _run_scripted_simulator_trace(problem, domain)
+    snapshot_path = TESTS_DIR / domain / "sdr_simulator_scripted.json"
+    assert_json_snapshot(actual, snapshot_path, f"{domain}[SDRSimulator-scripted]")
