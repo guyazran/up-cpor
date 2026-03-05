@@ -2,8 +2,15 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/‏‏CPOR/obj/x86/Debug
-/‏‏CPOR/bin/Debug
+# Repo-specific: keep only the required CPORLib obj DLL tracked.
+/CPORLib/bin/**
+/CPORLib/obj/**
+/TestCPORLib/bin/**
+/TestCPORLib/obj/**
+!/CPORLib/obj/
+!/CPORLib/obj/Debug/
+!/CPORLib/obj/Debug/netstandard2.0/
+!/CPORLib/obj/Debug/netstandard2.0/CPORLib.dll
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,macos,windows,linux,csharp,pycharm+all
