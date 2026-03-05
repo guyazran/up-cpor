@@ -16,15 +16,10 @@ from unified_planning.engines.results import PlanGenerationResultStatus
 from unified_planning.shortcuts import OneshotPlanner
 
 from cpor_test_utils import parse_dot, assert_dot_equal
-
-TESTS_DIR = Path(__file__).resolve().parent
-
+from domains import DOMAINS, TESTS_DIR
 
 from up_cpor.converter import UpCporConverter
 from CPORLib.Algorithms import CPORPlanner
-
-
-DOMAINS = ("blocks2", "blocks3", "doors5")
 
 
 @pytest.fixture(scope="session", autouse=True)

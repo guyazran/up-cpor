@@ -1,11 +1,11 @@
 import os
 import sys
-from pathlib import Path
 
 import pytest
 from unified_planning.io import PDDLReader
 from unified_planning.plans import ActionInstance
 
+from domains import DOMAINS, TESTS_DIR
 from up_cpor.simulator import SDRSimulator
 from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
 
@@ -14,9 +14,6 @@ from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_s
 if sys.platform == "darwin":
     os.environ["PYTHONNET_RUNTIME"] = "mono"
     os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
-
-TESTS_DIR = Path(__file__).resolve().parent
-DOMAINS = ("blocks2", "blocks3", "doors5")
 
 SCRIPTED_ACTIONS = {
     "blocks2": [

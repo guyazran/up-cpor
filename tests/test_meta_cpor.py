@@ -16,9 +16,8 @@ from unified_planning.engines.results import PlanGenerationResultStatus
 from unified_planning.shortcuts import OneshotPlanner
 
 from cpor_test_utils import parse_dot, assert_dot_equal
+from domains import DOMAINS, TESTS_DIR
 
-TESTS_DIR = Path(__file__).resolve().parent
-DOMAINS = ("blocks2", "blocks3", "doors5")
 CLASSICAL_PLANNERS = ("tamer", "pyperplan")
 
 
