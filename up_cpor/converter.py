@@ -258,8 +258,7 @@ class UpCporConverter:
     def __convert_string_to_observation(self, string, problem):
         if string is not None and string != 'None' and ":observe" in string:
             ob = string.replace("\n", " ").replace(")", "").replace("(", "").split(":observe ")[1]
-            obs = ob.split(" ")
-            obs = obs[0:2]
+            obs = ob.split()
             expr_manager = problem.environment.expression_manager
             obse = problem.fluent(obs[0])
             location = tuple(expr_manager.ObjectExp(problem.object(o_name)) for o_name in obs[1:])
