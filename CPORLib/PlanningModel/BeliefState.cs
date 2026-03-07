@@ -2,8 +2,7 @@
 using CPORLib.LogicalUtilities;
 using CPORLib.Parsing;
 using CPORLib.Tools;
-using Microsoft.SolverFoundation.Services;
-using Microsoft.SolverFoundation.Solvers;
+using Microsoft.Z3;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -2714,52 +2713,49 @@ namespace CPORLib.PlanningModel
 
 
 
-            ConstraintSystem solver = ConstraintSystem.CreateSolver();
-            Dictionary<int, CspTerm> dVariables = new Dictionary<int, CspTerm>();
-            foreach (int idx in lParticipatingVariables)
-                dVariables[idx] = solver.CreateBoolean("v" + idx);
-            foreach (List<int> lClause in lIntCluases)
+            using (Context ctx = new Context())
             {
-                List<CspTerm> lTerms = new List<CspTerm>();
-                foreach (int v in lClause)
+                Solver solver = ctx.MkSolver();
+                Dictionary<int, BoolExpr> dVariables = new Dictionary<int, BoolExpr>();
+                foreach (int idx in lParticipatingVariables)
+                    dVariables[idx] = ctx.MkBoolConst("v" + idx);
+
+                foreach (List<int> lClause in lIntCluases)
                 {
-                    int idx = Math.Abs(v);
-                    if (idx != 0)
+                    List<BoolExpr> lTerms = new List<BoolExpr>();
+                    foreach (int v in lClause)
                     {
-                        CspTerm var = dVariables[idx];
-                        if (v > 0)
-                            lTerms.Add(var);
-                        else
-                            lTerms.Add(solver.Not(var));
+                        int idx = Math.Abs(v);
+                        if (idx != 0)
+                        {
+                            BoolExpr var = dVariables[idx];
+                            lTerms.Add(v > 0 ? var : ctx.MkNot(var));
+                        }
                     }
-
-                }
-                CspTerm tOr = solver.Or(lTerms.ToArray());
-                solver.AddConstraints(tOr);
-            }
-            ConstraintSolverSolution solution = solver.Solve();
-
-            if (solution.HasFoundSolution)
-            {
-                ISet<Predicate> lSolution = new HashSet<Predicate>();
-
-                foreach (KeyValuePair<int, CspTerm> p in dVariables)
-                {
-                    int idx = p.Key - 1;
-                    if (idx < Problem.GetSATVariablesCount())
-                    {
-                        Predicate pAssigned = Problem.GetPredicateByIndex(idx);
-                        int value = (int)solution[p.Value];
-                        if (value == 0)
-                            lSolution.Add(pAssigned.Negate());
-                        else
-                            lSolution.Add(pAssigned);
-                    }
+                    solver.Assert(ctx.MkOr(lTerms.ToArray()));
                 }
 
+                if (solver.Check() == Status.SATISFIABLE)
+                {
+                    Model model = solver.Model;
+                    ISet<Predicate> lSolution = new HashSet<Predicate>();
 
+                    foreach (KeyValuePair<int, BoolExpr> p in dVariables)
+                    {
+                        int idx = p.Key - 1;
+                        if (idx < Problem.GetSATVariablesCount())
+                        {
+                            Predicate pAssigned = Problem.GetPredicateByIndex(idx);
+                            Expr val = model.Evaluate(p.Value, true);
+                            if (val.IsTrue)
+                                lSolution.Add(pAssigned);
+                            else
+                                lSolution.Add(pAssigned.Negate());
+                        }
+                    }
 
-                lAssignments.Add(lSolution);
+                    lAssignments.Add(lSolution);
+                }
             }
             tsTotalRunSatSolver += DateTime.Now - dtStart;
             cRuns++;

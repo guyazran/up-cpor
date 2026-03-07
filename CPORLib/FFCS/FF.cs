@@ -10,7 +10,6 @@ using CPORLib.PlanningModel;
 using CPORLib.Algorithms;
 using System.IO;
 using CPORLib.Parsing;
-using Microsoft.SolverFoundation.Services;
 
 namespace CPORLib.FFCS
 {

@@ -12,7 +12,6 @@ using System.Linq;
 using System.Text;
 using static CPORLib.Tools.Options;
 using Action = CPORLib.PlanningModel.PlanningAction;
-using static Microsoft.SolverFoundation.Solvers.SerializationStatus;
 
 #if PYTHONNET
 using Python.Runtime;

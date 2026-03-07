@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Solver.Foundation" Version="3.1.0" />
+    <PackageReference Include="Microsoft.Z3" Version="4.12.2" />
     <PackageReference Include="pythonnet" Version="3.0.1" />
   </ItemGroup>
 
