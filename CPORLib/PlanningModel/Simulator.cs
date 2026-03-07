@@ -43,7 +43,7 @@ namespace CPORLib.PlanningModel
         }
         public bool GoalReached
         {
-            get { return CurrentState.IsGoalState();}
+            get { return Problem.IsGoalState(CurrentState.UnderlyingEnvironmentState); }
         }
         
         public void Reset()

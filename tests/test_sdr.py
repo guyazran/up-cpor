@@ -19,8 +19,8 @@ if sys.platform == "darwin":
 
 SIMULATOR_CONFIG = {
     "blocks2": {"max_steps": 20, "stop_on_goal": True},
-    "blocks3": {"max_steps": 4, "stop_on_goal": False},
-    "blocks7": {"max_steps": 120, "stop_on_goal": False},
+    "blocks3": {"max_steps": 4, "stop_on_goal": True},
+    "blocks7": {"max_steps": 120, "stop_on_goal": True},
     "doors5": {"max_steps": 80, "stop_on_goal": True},
 }
 
