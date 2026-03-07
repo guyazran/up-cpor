@@ -1,6 +1,6 @@
 {
-  "goal_reached": null,
-  "steps": 1,
+  "goal_reached": true,
+  "steps": 16,
   "trace": [
     {
       "action": "observe-ball(p1-1, o1)",
@@ -10,6 +10,106 @@
           false
         ]
       ]
+    },
+    {
+      "action": "observe-ball(p1-1, o2)",
+      "observation": [
+        [
+          "obj-at(o2, p1-1)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p1-1, p1-2)",
+      "observation": null
+    },
+    {
+      "action": "move(p1-2, p2-2)",
+      "observation": null
+    },
+    {
+      "action": "observe-ball(p2-2, o1)",
+      "observation": [
+        [
+          "obj-at(o1, p2-2)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "observe-ball(p2-2, o2)",
+      "observation": [
+        [
+          "obj-at(o2, p2-2)",
+          true
+        ]
+      ]
+    },
+    {
+      "action": "pickup(o2, p2-2)",
+      "observation": null
+    },
+    {
+      "action": "move(p2-2, p1-2)",
+      "observation": null
+    },
+    {
+      "action": "observe-ball(p1-2, o1)",
+      "observation": [
+        [
+          "obj-at(o1, p1-2)",
+          true
+        ]
+      ]
+    },
+    {
+      "action": "pickup(o1, p1-2)",
+      "observation": null
+    },
+    {
+      "action": "observe-color(blue, o1)",
+      "observation": [
+        [
+          "color(o1, blue)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "observe-color(green, o1)",
+      "observation": [
+        [
+          "color(o1, green)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "observe-color(red, o1)",
+      "observation": [
+        [
+          "color(o1, red)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "trash(o1, purple, t2, p1-2)",
+      "observation": null
+    },
+    {
+      "action": "observe-color(blue, o2)",
+      "observation": [
+        [
+          "color(o2, blue)",
+          true
+        ]
+      ]
+    },
+    {
+      "action": "trash(o2, blue, t2, p1-2)",
+      "observation": null
     }
   ]
 }
