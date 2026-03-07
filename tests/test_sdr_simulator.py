@@ -31,13 +31,18 @@ SCRIPTED_ACTIONS = {
         ("senseon", ("b6", "b1")),
         ("senseclear", ("b5",)),
     ],
+    "colorballs2-2": [
+        ("observe-ball", ("p1-1", "o1")),
+        ("move", ("p1-1", "p1-2")),
+        ("observe-ball", ("p1-2", "o2")),
+    ],
     "doors5": [
         ("sense-door", ("p1-3", "p1-2")),
         ("sense-door", ("p1-3", "p2-3")),
     ],
 }
 
-CHECK_GOAL = {"blocks2": True, "blocks3": True, "blocks7": True, "doors5": True}
+CHECK_GOAL = {"blocks2": True, "blocks3": True, "blocks7": True, "colorballs2-2": True, "doors5": True}
 
 
 def _parse_problem(domain: str):
