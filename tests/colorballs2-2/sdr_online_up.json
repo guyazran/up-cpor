@@ -1,6 +1,6 @@
 {
   "goal_reached": true,
-  "steps": 21,
+  "steps": 19,
   "trace": [
     {
       "action": "move(p1-1, p2-1)",
@@ -36,9 +36,13 @@
       "observation": [
         [
           "obj-at(o2, p2-1)",
-          false
+          true
         ]
       ]
+    },
+    {
+      "action": "pickup(o2, p2-1)",
+      "observation": []
     },
     {
       "action": "move(p2-1, p1-1)",
@@ -49,40 +53,32 @@
       "observation": [
         [
           "obj-at(o1, p1-1)",
-          true
-        ]
-      ]
-    },
-    {
-      "action": "move(p1-1, p1-2)",
-      "observation": []
-    },
-    {
-      "action": "observe-ball(p1-2, o2)",
-      "observation": [
-        [
-          "obj-at(o2, p1-2)",
           false
         ]
       ]
     },
     {
-      "action": "move(p1-2, p1-1)",
+      "action": "move(p1-1, p2-1)",
       "observation": []
     },
     {
-      "action": "pickup(o1, p1-1)",
-      "observation": []
-    },
-    {
-      "action": "pickup(o2, p1-1)",
-      "observation": []
-    },
-    {
-      "action": "observe-color(blue, o1)",
+      "action": "observe-ball(p2-1, o1)",
       "observation": [
         [
-          "color(o1, blue)",
+          "obj-at(o1, p2-1)",
+          true
+        ]
+      ]
+    },
+    {
+      "action": "pickup(o1, p2-1)",
+      "observation": []
+    },
+    {
+      "action": "observe-color(red, o1)",
+      "observation": [
+        [
+          "color(o1, red)",
           false
         ]
       ]
@@ -97,17 +93,8 @@
       ]
     },
     {
-      "action": "trash(o1, purple, t1, p1-1)",
+      "action": "trash(o1, purple, t3, p2-1)",
       "observation": []
-    },
-    {
-      "action": "observe-color(green, o2)",
-      "observation": [
-        [
-          "color(o2, green)",
-          false
-        ]
-      ]
     },
     {
       "action": "observe-color(purple, o2)",
@@ -119,16 +106,16 @@
       ]
     },
     {
-      "action": "observe-color(red, o2)",
+      "action": "observe-color(blue, o2)",
       "observation": [
         [
-          "color(o2, red)",
-          false
+          "color(o2, blue)",
+          true
         ]
       ]
     },
     {
-      "action": "trash(o2, blue, t1, p1-1)",
+      "action": "trash(o2, blue, t3, p2-1)",
       "observation": []
     }
   ]
