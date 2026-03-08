@@ -8,15 +8,8 @@ if sys.platform == "darwin":
     os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
 
 import pytest
-from unified_planning.shortcuts import (
-    Bool,
-    BoolType,
-    Fluent,
-    InstantaneousAction,
-    Object,
-    Problem,
-    UserType,
-)
+import unified_planning.environment as up_environment
+from unified_planning.model import Fluent, InstantaneousAction, Object, Problem
 from up_cpor.converter import UpCporConverter
 
 
@@ -50,30 +43,34 @@ def _action_name(arity: int) -> str:
 
 
 def _build_problem_for_arities(arities: tuple[int, ...]) -> Problem:
-    obj_type = UserType("obj")
-    problem = Problem("converter_observation_arities")
+    env = up_environment.Environment()
+    obj_type = env.type_manager.UserType("obj")
+    bool_type = env.type_manager.BoolType()
+    problem = Problem("converter_observation_arities", environment=env)
 
     for i in range(1, max(arities) + 1):
-        problem.add_object(Object(f"o{i}", obj_type))
+        problem.add_object(Object(f"o{i}", obj_type, environment=env))
 
     for arity in arities:
         fluent_parameters = {f"f{i}": obj_type for i in range(1, arity + 1)}
         action_parameters = {f"a{i}": obj_type for i in range(1, arity + 1)}
-        problem.add_fluent(Fluent(_fluent_name(arity), BoolType(), **fluent_parameters))
-        problem.add_action(InstantaneousAction(_action_name(arity), **action_parameters))
+        problem.add_fluent(Fluent(_fluent_name(arity), bool_type, environment=env, **fluent_parameters))
+        problem.add_action(InstantaneousAction(_action_name(arity), _env=env, **action_parameters))
 
     return problem
 
 
 def _build_observation_problem():
-    obj_type = UserType("obj")
-    pos_type = UserType("pos")
-    problem = Problem("converter_observation")
+    env = up_environment.Environment()
+    obj_type = env.type_manager.UserType("obj")
+    pos_type = env.type_manager.UserType("pos")
+    bool_type = env.type_manager.BoolType()
+    problem = Problem("converter_observation", environment=env)
 
     for name, obj_type_name in (("o1", obj_type), ("o2", obj_type), ("p2-1", pos_type), ("p2-2", pos_type)):
-        problem.add_object(Object(name, obj_type_name))
+        problem.add_object(Object(name, obj_type_name, environment=env))
 
-    fluent = Fluent("obj-at", BoolType(), obj=obj_type, pos=pos_type)
+    fluent = Fluent("obj-at", bool_type, environment=env, obj=obj_type, pos=pos_type)
     problem.add_fluent(fluent)
     return problem, fluent
 
@@ -87,7 +84,7 @@ def _ground_observation(problem: Problem, fluent: Fluent, obj_name: str, pos_nam
             expr_manager.ObjectExp(problem.object(pos_name)),
         ),
     )
-    return {grounded: Bool(value)}
+    return {grounded: expr_manager.Bool(value)}
 
 
 def _build_cpor_action(arity: int) -> str:
