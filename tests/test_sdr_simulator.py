@@ -2,10 +2,10 @@ import os
 import sys
 
 import pytest
-from unified_planning.io import PDDLReader
 from unified_planning.plans import ActionInstance
 
 from domains import DOMAINS, TESTS_DIR
+from up_test_utils import make_test_environment, parse_test_problem
 from up_cpor.simulator import SDRSimulator
 from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
 
@@ -45,12 +45,6 @@ SCRIPTED_ACTIONS = {
 CHECK_GOAL = {"blocks2": True, "blocks3": True, "blocks7": True, "colorballs2-2": True, "doors5": True}
 
 
-def _parse_problem(domain: str):
-    reader = PDDLReader()
-    domain_dir = TESTS_DIR / domain
-    return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
-
-
 def _make_action_instance(problem, action_name: str, obj_names):
     action = problem.action(action_name)
     expr_manager = problem.environment.expression_manager
@@ -86,7 +80,8 @@ def _run_scripted_simulator_trace(problem, domain: str):
 
 @pytest.mark.parametrize("domain", DOMAINS)
 def test_sdr_simulator_scripted_trace_matches_snapshot(domain: str):
-    problem = _parse_problem(domain)
+    env = make_test_environment()
+    problem = parse_test_problem(domain, env)
     actual = _run_scripted_simulator_trace(problem, domain)
     snapshot_path = TESTS_DIR / domain / "sdr_simulator_scripted.json"
     assert_json_snapshot(actual, snapshot_path, f"{domain}[SDRSimulator-scripted]")
@@ -104,7 +99,8 @@ def test_goal_reached_returns_bool(domain: str):
     without raising FileNotFoundException.
     """
     reset_sdr_seeds(0)
-    problem = _parse_problem(domain)
+    env = make_test_environment()
+    problem = parse_test_problem(domain, env)
     simulator = SDRSimulator(problem)
 
     result = simulator.is_goal_reached()

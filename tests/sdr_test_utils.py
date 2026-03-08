@@ -4,9 +4,12 @@ import random
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from pysmt.environment import reset_env as reset_pysmt_env
+
 
 def reset_sdr_seeds(seed: int = 0) -> None:
     random.seed(seed)
+    reset_pysmt_env()
 
     import System
 

@@ -1,13 +1,14 @@
 import os
+import json
+import subprocess
 import sys
+from pathlib import Path
 
 import pytest
-import unified_planning.environment as environment
-from unified_planning.io import PDDLReader
 from unified_planning.model.contingent import SimulatedExecutionEnvironment
-from unified_planning.shortcuts import ActionSelector, Bool
 
 from domains import DOMAINS, TESTS_DIR
+from up_test_utils import make_test_environment, parse_test_problem, use_test_environment
 from up_cpor.converter import UpCporConverter
 from up_cpor.simulator import SDRSimulator
 from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
@@ -28,86 +29,79 @@ SIMULATOR_CONFIG = {
 }
 
 
-@pytest.fixture(scope="session", autouse=True)
-def register_sdr_engine():
-    env = environment.get_environment()
-    env.credits_stream = None
-    env.factory.add_engine("SDRPlanning", "up_cpor.engine", "SDRImpl")
-
-
-def _parse_problem(domain: str):
-    reader = PDDLReader()
-    domain_dir = TESTS_DIR / domain
-    return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
-
-
-def _parse_problem_in_fresh_environment(domain: str):
-    reader = PDDLReader(environment.Environment())
-    domain_dir = TESTS_DIR / domain
-    return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
-
-
 def _run_online_trace(problem, simulator_cls, max_steps: int, stop_on_goal: bool):
     reset_sdr_seeds(0)
 
     all_action_names = {a.name for a in problem.actions}
     trace = []
 
-    with ActionSelector(name="SDRPlanning", problem=problem) as solver:
-        simulator = simulator_cls(problem)
+    with use_test_environment(problem.environment):
+        with problem.environment.factory.ActionSelector(problem=problem, name="SDRPlanning") as solver:
+            simulator = simulator_cls(problem)
 
-        if stop_on_goal:
-            while (not simulator.is_goal_reached()) and len(trace) < max_steps:
-                action = solver.get_action()
-                assert action is not None, "SDR returned no action before reaching goal."
-                assert action.action.name in all_action_names, f"Unknown action: {action}"
+            if stop_on_goal:
+                while (not simulator.is_goal_reached()) and len(trace) < max_steps:
+                    action = solver.get_action()
+                    assert action is not None, "SDR returned no action before reaching goal."
+                    assert action.action.name in all_action_names, f"Unknown action: {action}"
 
-                observation = simulator.apply(action)
-                solver.update(observation)
-                trace.append({"action": str(action), "observation": normalize_observation(observation)})
+                    observation = simulator.apply(action)
+                    solver.update(observation)
+                    trace.append({"action": str(action), "observation": normalize_observation(observation)})
 
-            goal_reached = simulator.is_goal_reached()
-            assert goal_reached, f"Goal was not reached within {max_steps} steps."
-        else:
-            for _ in range(max_steps):
-                action = solver.get_action()
-                if action is None:
-                    break
-                assert action.action.name in all_action_names, f"Unknown action: {action}"
+                goal_reached = simulator.is_goal_reached()
+                assert goal_reached, f"Goal was not reached within {max_steps} steps."
+            else:
+                for _ in range(max_steps):
+                    action = solver.get_action()
+                    if action is None:
+                        break
+                    assert action.action.name in all_action_names, f"Unknown action: {action}"
 
-                observation = simulator.apply(action)
-                solver.update(observation)
-                trace.append({"action": str(action), "observation": normalize_observation(observation)})
+                    observation = simulator.apply(action)
+                    solver.update(observation)
+                    trace.append({"action": str(action), "observation": normalize_observation(observation)})
 
-            goal_reached = None
+                goal_reached = None
 
     return {"goal_reached": goal_reached, "steps": len(trace), "trace": trace}
 
 
+def _run_online_trace_in_subprocess(domain: str, mode: str, tmp_path: Path):
+    output_path = tmp_path / f"{domain}_{mode}_trace.json"
+    runner = TESTS_DIR / "sdr_trace_runner.py"
+    completed = subprocess.run(
+        [sys.executable, str(runner), "--mode", mode, "--domain", domain, "--output", str(output_path)],
+        cwd=TESTS_DIR.parent,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, (
+        f"Trace runner failed for {domain}[{mode}]\n"
+        f"stdout:\n{completed.stdout}\n"
+        f"stderr:\n{completed.stderr}"
+    )
+    return json.loads(output_path.read_text(encoding="utf-8"))
+
+
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_sdr_online_trace_matches_snapshot_with_up_simulator(domain: str, register_sdr_engine):
-    problem = _parse_problem(domain)
-    actual = _run_online_trace(problem, SimulatedExecutionEnvironment, max_steps=120, stop_on_goal=True)
+def test_sdr_online_trace_matches_snapshot_with_up_simulator(domain: str, tmp_path: Path):
+    actual = _run_online_trace_in_subprocess(domain, "up", tmp_path)
     snapshot_path = TESTS_DIR / domain / "sdr_online_up.json"
     assert_json_snapshot(actual, snapshot_path, f"{domain}[UP]")
 
 
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_sdr_online_trace_matches_snapshot_with_sdr_simulator(domain: str, register_sdr_engine):
-    problem = _parse_problem(domain)
-    cfg = SIMULATOR_CONFIG[domain]
-    actual = _run_online_trace(
-        problem,
-        SDRSimulator,
-        max_steps=cfg["max_steps"],
-        stop_on_goal=cfg["stop_on_goal"],
-    )
+def test_sdr_online_trace_matches_snapshot_with_sdr_simulator(domain: str, tmp_path: Path):
+    actual = _run_online_trace_in_subprocess(domain, "sdrsim", tmp_path)
     snapshot_path = TESTS_DIR / domain / "sdr_online_sdrsim.json"
     assert_json_snapshot(actual, snapshot_path, f"{domain}[SDRSimulator]")
 
 
 def test_sdr_parser_rejects_malformed_grounded_observation():
-    problem = _parse_problem_in_fresh_environment("colorballs2-2")
+    env = make_test_environment()
+    problem = parse_test_problem("colorballs2-2", env)
     converter = UpCporConverter()
     parser = Parser()
     c_domain = converter.createDomain(problem)
@@ -118,7 +112,8 @@ def test_sdr_parser_rejects_malformed_grounded_observation():
 
 def test_sdr_direct_solver_replans_after_false_obj_at_observation():
     reset_sdr_seeds(0)
-    problem = _parse_problem_in_fresh_environment("colorballs2-2")
+    env = make_test_environment()
+    problem = parse_test_problem("colorballs2-2", env)
     converter = UpCporConverter()
     c_domain = converter.createDomain(problem)
     c_problem = converter.createProblem(problem, c_domain)
@@ -143,7 +138,7 @@ def test_sdr_direct_solver_replans_after_false_obj_at_observation():
                 expr_manager.ObjectExp(problem.object("o2")),
                 expr_manager.ObjectExp(problem.object("p2-2")),
             ),
-        ): Bool(False)
+        ): expr_manager.Bool(False)
     }
 
     assert converter.SDRupdate(solver, observation) is True
