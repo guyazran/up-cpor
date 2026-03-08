@@ -27,6 +27,7 @@ SIMULATOR_CONFIG = {
     "blocks7": {"max_steps": 120, "stop_on_goal": True},
     "colorballs2-2": {"max_steps": 120, "stop_on_goal": True},
     "doors5": {"max_steps": 80, "stop_on_goal": True},
+    "unix1": {"max_steps": 20, "stop_on_goal": True},
 }
 
 

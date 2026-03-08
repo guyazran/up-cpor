@@ -1,0 +1,27 @@
+digraph contingent_plan {
+	_nil [style="invis"];
+	0 [label="0)cd-down~root~sub1"];
+	1 [label="1)cd-down~sub1~sub11"];
+	2 [label="2)ls~sub11~my-file"];
+	5 [label="3)mv~my-file~sub11~root"];
+	6 [label="4)cd-up~sub11~sub1"];
+	7 [label="5) Goal"];
+	8 [label="6)cd-up~sub1~root"];
+	9 [label="7)cd-down~root~sub2"];
+	10 [label="8)cd-down~sub2~sub21"];
+	11 [label="9)ls~sub21~my-file"];
+	3 [label="False" ,shape="box"];
+	4 [label="True" ,shape="box"];
+	2 -> 3;
+	3 -> 6;
+	2 -> 4;
+	4 -> 5;
+	5 -> 7;
+	10 -> 11;
+	9 -> 10;
+	8 -> 9;
+	6 -> 8;
+	1 -> 2;
+	0 -> 1;
+	_nil -> 0 [label=""];
+}

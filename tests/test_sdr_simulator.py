@@ -40,9 +40,14 @@ SCRIPTED_ACTIONS = {
         ("sense-door", ("p1-3", "p1-2")),
         ("sense-door", ("p1-3", "p2-3")),
     ],
+    "unix1": [
+        ("cd-down", ("root", "sub1")),
+        ("cd-down", ("sub1", "sub11")),
+        ("ls", ("sub11", "my-file")),
+    ],
 }
 
-CHECK_GOAL = {"blocks2": True, "blocks3": True, "blocks7": True, "colorballs2-2": True, "doors5": True}
+CHECK_GOAL = {"blocks2": True, "blocks3": True, "blocks7": True, "colorballs2-2": True, "doors5": True, "unix1": True}
 
 
 def _make_action_instance(problem, action_name: str, obj_names):
