@@ -1,14 +1,15 @@
 import os
-import json
-import subprocess
 import sys
-from pathlib import Path
 
 import pytest
-from unified_planning.model.contingent import SimulatedExecutionEnvironment
 
 from domains import DOMAINS, TESTS_DIR
-from up_test_utils import make_test_environment, parse_test_problem, use_test_environment
+from up_test_utils import (
+    DeterministicSimulatedExecutionEnvironment,
+    make_test_environment,
+    parse_test_problem,
+    use_test_environment,
+)
 from up_cpor.converter import UpCporConverter
 from up_cpor.simulator import SDRSimulator
 from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
@@ -36,9 +37,13 @@ def _run_online_trace(problem, simulator_cls, max_steps: int, stop_on_goal: bool
     trace = []
 
     with use_test_environment(problem.environment):
-        with problem.environment.factory.ActionSelector(problem=problem, name="SDRPlanning") as solver:
+        simulator = None
+        if simulator_cls is DeterministicSimulatedExecutionEnvironment:
             simulator = simulator_cls(problem)
 
+        with problem.environment.factory.ActionSelector(problem=problem, name="SDRPlanning") as solver:
+            if simulator is None:
+                simulator = simulator_cls(problem)
             if stop_on_goal:
                 while (not simulator.is_goal_reached()) and len(trace) < max_steps:
                     action = solver.get_action()
@@ -67,34 +72,24 @@ def _run_online_trace(problem, simulator_cls, max_steps: int, stop_on_goal: bool
     return {"goal_reached": goal_reached, "steps": len(trace), "trace": trace}
 
 
-def _run_online_trace_in_subprocess(domain: str, mode: str, tmp_path: Path):
-    output_path = tmp_path / f"{domain}_{mode}_trace.json"
-    runner = TESTS_DIR / "sdr_trace_runner.py"
-    completed = subprocess.run(
-        [sys.executable, str(runner), "--mode", mode, "--domain", domain, "--output", str(output_path)],
-        cwd=TESTS_DIR.parent,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode == 0, (
-        f"Trace runner failed for {domain}[{mode}]\n"
-        f"stdout:\n{completed.stdout}\n"
-        f"stderr:\n{completed.stderr}"
-    )
-    return json.loads(output_path.read_text(encoding="utf-8"))
-
-
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_sdr_online_trace_matches_snapshot_with_up_simulator(domain: str, tmp_path: Path):
-    actual = _run_online_trace_in_subprocess(domain, "up", tmp_path)
+def test_sdr_online_trace_matches_snapshot_with_up_simulator(domain: str):
+    actual = _run_online_trace(
+        parse_test_problem(domain, make_test_environment(sdr=True)),
+        DeterministicSimulatedExecutionEnvironment,
+        **SIMULATOR_CONFIG[domain],
+    )
     snapshot_path = TESTS_DIR / domain / "sdr_online_up.json"
     assert_json_snapshot(actual, snapshot_path, f"{domain}[UP]")
 
 
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_sdr_online_trace_matches_snapshot_with_sdr_simulator(domain: str, tmp_path: Path):
-    actual = _run_online_trace_in_subprocess(domain, "sdrsim", tmp_path)
+def test_sdr_online_trace_matches_snapshot_with_sdr_simulator(domain: str):
+    actual = _run_online_trace(
+        parse_test_problem(domain, make_test_environment(sdr=True)),
+        SDRSimulator,
+        **SIMULATOR_CONFIG[domain],
+    )
     snapshot_path = TESTS_DIR / domain / "sdr_online_sdrsim.json"
     assert_json_snapshot(actual, snapshot_path, f"{domain}[SDRSimulator]")
 

@@ -1,6 +1,6 @@
 {
   "goal_reached": true,
-  "steps": 28,
+  "steps": 23,
   "trace": [
     {
       "action": "move(p1-3, p1-2)",
@@ -28,29 +28,13 @@
       "observation": null
     },
     {
-      "action": "move(p1-3, p1-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p1-4, p1-5)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p1-5, p2-5)",
+      "action": "sense-door(p1-3, p2-3)",
       "observation": [
         [
-          "opened(p2-5)",
+          "opened(p2-3)",
           false
         ]
       ]
-    },
-    {
-      "action": "move(p1-5, p1-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p1-4, p1-3)",
-      "observation": null
     },
     {
       "action": "move(p1-3, p1-2)",
@@ -74,25 +58,17 @@
       "observation": null
     },
     {
-      "action": "move(p3-2, p3-1)",
+      "action": "move(p3-2, p3-3)",
       "observation": null
     },
     {
-      "action": "sense-door(p3-1, p4-1)",
+      "action": "sense-door(p3-3, p4-3)",
       "observation": [
         [
-          "opened(p4-1)",
+          "opened(p4-3)",
           false
         ]
       ]
-    },
-    {
-      "action": "move(p3-1, p3-2)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-2, p3-3)",
-      "observation": null
     },
     {
       "action": "move(p3-3, p3-4)",
@@ -114,6 +90,15 @@
     {
       "action": "move(p3-5, p3-4)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p3-4, p4-4)",
+      "observation": [
+        [
+          "opened(p4-4)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p3-4, p3-3)",
