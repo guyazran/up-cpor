@@ -1,6 +1,6 @@
 {
   "goal_reached": true,
-  "steps": 16,
+  "steps": 20,
   "trace": [
     {
       "action": "observe-ball(p1-1, o1)",
@@ -10,6 +10,31 @@
           false
         ]
       ]
+    },
+    {
+      "action": "move(p1-1, p2-1)",
+      "observation": null
+    },
+    {
+      "action": "observe-ball(p2-1, o1)",
+      "observation": [
+        [
+          "obj-at(o1, p2-1)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p2-1, p2-2)",
+      "observation": null
+    },
+    {
+      "action": "move(p2-2, p1-2)",
+      "observation": null
+    },
+    {
+      "action": "move(p1-2, p1-1)",
+      "observation": null
     },
     {
       "action": "observe-ball(p1-1, o2)",
@@ -22,36 +47,6 @@
     },
     {
       "action": "move(p1-1, p1-2)",
-      "observation": null
-    },
-    {
-      "action": "move(p1-2, p2-2)",
-      "observation": null
-    },
-    {
-      "action": "observe-ball(p2-2, o1)",
-      "observation": [
-        [
-          "obj-at(o1, p2-2)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "observe-ball(p2-2, o2)",
-      "observation": [
-        [
-          "obj-at(o2, p2-2)",
-          true
-        ]
-      ]
-    },
-    {
-      "action": "pickup(o2, p2-2)",
-      "observation": null
-    },
-    {
-      "action": "move(p2-2, p1-2)",
       "observation": null
     },
     {
@@ -68,47 +63,73 @@
       "observation": null
     },
     {
-      "action": "observe-color(blue, o1)",
+      "action": "observe-ball(p1-2, o2)",
       "observation": [
         [
-          "color(o1, blue)",
+          "obj-at(o2, p1-2)",
           false
         ]
       ]
     },
     {
-      "action": "observe-color(green, o1)",
-      "observation": [
-        [
-          "color(o1, green)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "observe-color(red, o1)",
-      "observation": [
-        [
-          "color(o1, red)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "trash(o1, purple, t2, p1-2)",
+      "action": "move(p1-2, p2-2)",
       "observation": null
     },
     {
-      "action": "observe-color(blue, o2)",
+      "action": "observe-ball(p2-2, o2)",
       "observation": [
         [
-          "color(o2, blue)",
+          "obj-at(o2, p2-2)",
           true
         ]
       ]
     },
     {
-      "action": "trash(o2, blue, t2, p1-2)",
+      "action": "pickup(o2, p2-2)",
+      "observation": null
+    },
+    {
+      "action": "observe-color(purple, o1)",
+      "observation": [
+        [
+          "color(o1, purple)",
+          true
+        ]
+      ]
+    },
+    {
+      "action": "trash(o1, purple, t4, p2-2)",
+      "observation": null
+    },
+    {
+      "action": "observe-color(green, o2)",
+      "observation": [
+        [
+          "color(o2, green)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "observe-color(purple, o2)",
+      "observation": [
+        [
+          "color(o2, purple)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "observe-color(red, o2)",
+      "observation": [
+        [
+          "color(o2, red)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "trash(o2, blue, t4, p2-2)",
       "observation": null
     }
   ]

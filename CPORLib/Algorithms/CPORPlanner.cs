@@ -20,7 +20,6 @@ namespace CPORLib.Algorithms
 
         public CPORPlanner(Domain domain, Problem problem) : base(domain, problem)  
         {
-            Options.ComputeCompletePlanTree = true;
         }
 
 
@@ -29,11 +28,15 @@ namespace CPORLib.Algorithms
 
         public ConditionalPlanTreeNode OfflinePlanning()
         {
-            try
+            using (new OptionsSnapshot())
             {
+                Options.ComputeCompletePlanTree = true;
+                Options.TagsCount = 2;
+                try
+                {
 
-                //if (Verbose)
-                Console.WriteLine("Started offline planning for " + Domain.Name + ", " + DateTime.Now);
+                    //if (Verbose)
+                    Console.WriteLine("Started offline planning for " + Domain.Name + ", " + DateTime.Now);
 
                 Dictionary<PartiallySpecifiedState, PartiallySpecifiedState> dAlreadyVisitedStates = new Dictionary<PartiallySpecifiedState, PartiallySpecifiedState>(new PartiallySpecifiedState_IEqualityComparer());
                 DateTime dtStart = DateTime.Now;
@@ -294,20 +297,20 @@ namespace CPORLib.Algorithms
                 TraceListener.Flush();
                 TraceListener.Close();
 
-                return pssInitial.Plan;
+                    return pssInitial.Plan;
+                }
+                catch(Exception e)
+                {
+                    Console.WriteLine("Caught an exception: " + e.Message);
+                    Console.WriteLine(e.StackTrace);
+
+
+                    CPORPlanner.TraceListener.Write(e.StackTrace);
+                    TraceListener.Flush();
+                    TraceListener.Close();
+                    return null;
+                }
             }
-            catch(Exception e)
-            {
-                Console.WriteLine("Caught an exception: " + e.Message);
-                Console.WriteLine(e.StackTrace);
-
-
-                CPORPlanner.TraceListener.Write(e.StackTrace);
-                TraceListener.Flush();
-                TraceListener.Close();
-                return null;
-            }
-
         }
 
 
@@ -317,32 +320,38 @@ namespace CPORLib.Algorithms
 
         public static bool ValidatePlanGraph(string sPlanFile, Domain d, Problem p, out int cNodes)
         {
-            bool bComputePlanTree = Options.ComputeCompletePlanTree;
-            Options.ComputeCompletePlanTree = true;
-            ConditionalPlanTreeNode nRoot = ReadPlan(sPlanFile, d);
-
-            if (nRoot == null)
+            using (new OptionsSnapshot())
             {
-                cNodes = 0;
-                return false;
+                Options.ComputeCompletePlanTree = true;
+                Options.TagsCount = 2;
+                ConditionalPlanTreeNode nRoot = ReadPlan(sPlanFile, d);
+
+                if (nRoot == null)
+                {
+                    cNodes = 0;
+                    return false;
+                }
+
+                BeliefState bsInitial = p.GetInitialBelief();
+                PartiallySpecifiedState pssInit = bsInitial.GetPartiallySpecifiedState();
+
+                HashSet<int> lNodes = new HashSet<int>();
+                GetAllNodes(nRoot, lNodes);
+                cNodes = lNodes.Count;
+                int cLeaves = 0;
+                return ValidatePlanGraph(pssInit, nRoot, new List<ConditionalPlanTreeNode>(), new List<string>(), DateTime.Now, new TimeSpan(0, 15, 0), ref cLeaves);
             }
-
-            BeliefState bsInitial = p.GetInitialBelief();
-            PartiallySpecifiedState pssInit = bsInitial.GetPartiallySpecifiedState();
-
-            HashSet<int> lNodes = new HashSet<int>();
-            GetAllNodes(nRoot, lNodes);
-            cNodes = lNodes.Count;
-            int cLeaves = 0;
-            bool bValid = ValidatePlanGraph(pssInit, nRoot, new List<ConditionalPlanTreeNode>(), new List<string>(), DateTime.Now, new TimeSpan(0, 15, 0), ref cLeaves);
-            Options.ComputeCompletePlanTree = bComputePlanTree;
-            return bValid;
         }
 
         public bool ValidatePlanGraph(ConditionalPlanTreeNode nCurrent)
         {
-            int cCheckedLeaves = 0;
-            return ValidatePlanGraph(Problem.GetInitialBelief().GetPartiallySpecifiedState(), nCurrent, new List<ConditionalPlanTreeNode>(), new List<string>(), DateTime.Now, new TimeSpan(0, 15, 0), ref cCheckedLeaves);
+            using (new OptionsSnapshot())
+            {
+                Options.ComputeCompletePlanTree = true;
+                Options.TagsCount = 2;
+                int cCheckedLeaves = 0;
+                return ValidatePlanGraph(Problem.GetInitialBelief().GetPartiallySpecifiedState(), nCurrent, new List<ConditionalPlanTreeNode>(), new List<string>(), DateTime.Now, new TimeSpan(0, 15, 0), ref cCheckedLeaves);
+            }
         }
 
         public static bool ValidatePlanGraph(PartiallySpecifiedState pssCurrent, ConditionalPlanTreeNode nCurrent, List<ConditionalPlanTreeNode> lHistory, List<string> ll,
