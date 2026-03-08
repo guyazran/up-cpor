@@ -9,6 +9,7 @@ if sys.platform == "darwin":
 
 import pytest
 from unified_planning.shortcuts import (
+    Bool,
     BoolType,
     Fluent,
     InstantaneousAction,
@@ -25,6 +26,15 @@ class _FakeCporPlanNode:
         self.SingleChild = single_child
         self.FalseObservationChild = None
         self.TrueObservationChild = None
+
+
+class _FakeSolver:
+    def __init__(self):
+        self.observations = []
+
+    def SetObservation(self, observation):
+        self.observations.append(observation)
+        return True
 
 
 def _object_names(arity: int):
@@ -53,6 +63,31 @@ def _build_problem_for_arities(arities: tuple[int, ...]) -> Problem:
         problem.add_action(InstantaneousAction(_action_name(arity), **action_parameters))
 
     return problem
+
+
+def _build_observation_problem():
+    obj_type = UserType("obj")
+    pos_type = UserType("pos")
+    problem = Problem("converter_observation")
+
+    for name, obj_type_name in (("o1", obj_type), ("o2", obj_type), ("p2-1", pos_type), ("p2-2", pos_type)):
+        problem.add_object(Object(name, obj_type_name))
+
+    fluent = Fluent("obj-at", BoolType(), obj=obj_type, pos=pos_type)
+    problem.add_fluent(fluent)
+    return problem, fluent
+
+
+def _ground_observation(problem: Problem, fluent: Fluent, obj_name: str, pos_name: str, value: bool):
+    expr_manager = problem.environment.expression_manager
+    grounded = expr_manager.FluentExp(
+        fluent,
+        (
+            expr_manager.ObjectExp(problem.object(obj_name)),
+            expr_manager.ObjectExp(problem.object(pos_name)),
+        ),
+    )
+    return {grounded: Bool(value)}
 
 
 def _build_cpor_action(arity: int) -> str:
@@ -100,3 +135,36 @@ def test_converter_create_action_tree_supports_linear_plan_mixed_arities():
             observation_map, child = node.children[0]
             assert observation_map == {}
             node = child
+
+
+def test_converter_sdrupdate_forwards_boolean_observations_to_solver():
+    problem, fluent = _build_observation_problem()
+    converter = UpCporConverter()
+    solver = _FakeSolver()
+
+    assert converter.SDRupdate(solver, None) is True
+    assert solver.observations[-1] is None
+
+    assert converter.SDRupdate(solver, {}) is True
+    assert solver.observations[-1] is None
+
+    false_observation = _ground_observation(problem, fluent, "o2", "p2-2", False)
+    assert converter.SDRupdate(solver, false_observation) is True
+    assert solver.observations[-1] == "false"
+
+    true_observation = _ground_observation(problem, fluent, "o1", "p2-1", True)
+    assert converter.SDRupdate(solver, true_observation) is True
+    assert solver.observations[-1] == "true"
+
+
+def test_converter_sdrupdate_rejects_multiple_observations():
+    problem, fluent = _build_observation_problem()
+    converter = UpCporConverter()
+    solver = _FakeSolver()
+
+    observation = {}
+    observation.update(_ground_observation(problem, fluent, "o1", "p2-1", True))
+    observation.update(_ground_observation(problem, fluent, "o2", "p2-2", False))
+
+    with pytest.raises(ValueError, match="at most one grounded observation"):
+        converter.SDRupdate(solver, observation)

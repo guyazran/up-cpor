@@ -5,11 +5,13 @@ import pytest
 import unified_planning.environment as environment
 from unified_planning.io import PDDLReader
 from unified_planning.model.contingent import SimulatedExecutionEnvironment
-from unified_planning.shortcuts import ActionSelector
+from unified_planning.shortcuts import ActionSelector, Bool
 
 from domains import DOMAINS, TESTS_DIR
+from up_cpor.converter import UpCporConverter
 from up_cpor.simulator import SDRSimulator
 from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
+from CPORLib.Parsing import Parser
 
 # Set environment variables for Python.NET on macOS
 # using the Mono runtime installed via Homebrew.
@@ -35,6 +37,12 @@ def register_sdr_engine():
 
 def _parse_problem(domain: str):
     reader = PDDLReader()
+    domain_dir = TESTS_DIR / domain
+    return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
+
+
+def _parse_problem_in_fresh_environment(domain: str):
+    reader = PDDLReader(environment.Environment())
     domain_dir = TESTS_DIR / domain
     return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
 
@@ -96,3 +104,50 @@ def test_sdr_online_trace_matches_snapshot_with_sdr_simulator(domain: str, regis
     )
     snapshot_path = TESTS_DIR / domain / "sdr_online_sdrsim.json"
     assert_json_snapshot(actual, snapshot_path, f"{domain}[SDRSimulator]")
+
+
+def test_sdr_parser_rejects_malformed_grounded_observation():
+    problem = _parse_problem_in_fresh_environment("colorballs2-2")
+    converter = UpCporConverter()
+    parser = Parser()
+    c_domain = converter.createDomain(problem)
+
+    with pytest.raises(Exception, match=r"Unknown constant o2,"):
+        parser.ParseFormula("(not (obj-at o2, p2-2))", c_domain)
+
+
+def test_sdr_direct_solver_replans_after_false_obj_at_observation():
+    reset_sdr_seeds(0)
+    problem = _parse_problem_in_fresh_environment("colorballs2-2")
+    converter = UpCporConverter()
+    c_domain = converter.createDomain(problem)
+    c_problem = converter.createProblem(problem, c_domain)
+    solver = converter.createSDRSolver(c_domain, c_problem)
+
+    first_action = converter.SDRGet_action(solver, problem)
+    assert str(first_action) == "move(p1-1, p2-1)"
+    assert converter.SDRupdate(solver, None) is True
+
+    second_action = converter.SDRGet_action(solver, problem)
+    assert str(second_action) == "move(p2-1, p2-2)"
+    assert converter.SDRupdate(solver, None) is True
+
+    third_action = converter.SDRGet_action(solver, problem)
+    assert str(third_action) == "observe-ball(p2-2, o2)"
+
+    expr_manager = problem.environment.expression_manager
+    observation = {
+        expr_manager.FluentExp(
+            problem.fluent("obj-at"),
+            (
+                expr_manager.ObjectExp(problem.object("o2")),
+                expr_manager.ObjectExp(problem.object("p2-2")),
+            ),
+        ): Bool(False)
+    }
+
+    assert converter.SDRupdate(solver, observation) is True
+
+    next_action = converter.SDRGet_action(solver, problem)
+    assert next_action is not None
+    assert next_action.action.name in {action.name for action in problem.actions}

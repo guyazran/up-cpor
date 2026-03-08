@@ -70,19 +70,44 @@ class UpCporConverter:
         return solver
 
     def SDRupdate(self, solver, observation):
-        orr_ob = observation
-        if observation is not None:
-            if len(observation)>0:
-                full_observation = str(observation).split(': ')
-                observation = full_observation[0].replace('(', ' ').replace('{', '(')
-                if "on" in observation:
-                    observation = observation.replace(",", "")
-                if full_observation[1].replace('}', '') == 'false':
-                    observation = f"(not {observation})"
-            else:
-                observation = None
-        applied = solver.SetObservation(observation)
+        normalized_observation = self.__normalize_sdr_observation(observation)
+        applied = solver.SetObservation(normalized_observation)
         return applied
+
+    def __normalize_sdr_observation(self, observation):
+        if observation is None or len(observation) == 0:
+            return None
+
+        if len(observation) != 1:
+            raise ValueError(f"SDR expects at most one grounded observation, got {len(observation)}.")
+
+        fluent_exp, value = next(iter(observation.items()))
+        if not isinstance(fluent_exp, FNode) or fluent_exp.node_type != OperatorKind.FLUENT_EXP:
+            raise ValueError(f"Unsupported observation key: {fluent_exp!r}")
+
+        if not all(arg.is_object_exp() for arg in fluent_exp.args):
+            raise ValueError(f"Observation must be grounded: {fluent_exp}")
+
+        if self.__is_true_observation_value(value):
+            return "true"
+        if self.__is_false_observation_value(value):
+            return "false"
+
+        raise ValueError(f"Unsupported observation value: {value!r}")
+
+    def __is_true_observation_value(self, value) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, FNode):
+            return value.is_true()
+        return False
+
+    def __is_false_observation_value(self, value) -> bool:
+        if isinstance(value, bool):
+            return not value
+        if isinstance(value, FNode):
+            return value.is_false()
+        return False
 
     def SDRGet_action(self, solver, problem)  -> ActionInstance:
         c_action = solver.GetAction()
