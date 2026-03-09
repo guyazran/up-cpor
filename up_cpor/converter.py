@@ -14,6 +14,36 @@ else:
 
 PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 DLL_PATH = os.path.join(PROJECT_PATH, "CPORLib.dll")
+
+
+def _ensure_native_z3():
+    """Ensure the native libz3 library is discoverable by Mono's P/Invoke."""
+    if sys.platform.startswith("win"):
+        lib_name = "libz3.dll"
+    elif sys.platform == "darwin":
+        lib_name = "libz3.dylib"
+    else:
+        lib_name = "libz3.so"
+
+    target = os.path.join(PROJECT_PATH, lib_name)
+    if os.path.exists(target):
+        return
+
+    try:
+        import z3 as _z3_pkg
+        source = os.path.join(os.path.dirname(_z3_pkg.__file__), "lib", lib_name)
+        if os.path.isfile(source):
+            try:
+                os.symlink(source, target)
+            except OSError:
+                import shutil
+                shutil.copy2(source, target)
+    except Exception:
+        pass  # Z3 SAT solver will fail at call time with a clear error
+
+
+_ensure_native_z3()
+
 clr.AddReference(DLL_PATH)
 
 from CPORLib.PlanningModel import Domain, Problem, ParametrizedAction, PlanningAction, Simulator

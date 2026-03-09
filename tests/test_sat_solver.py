@@ -7,29 +7,7 @@ if sys.platform == "darwin":
     os.environ["PYTHONNET_RUNTIME"] = "mono"
     os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
 
-import clr
-
-# --- Z3 setup ---------------------------------------------------------------
-# Microsoft.Z3.dll (managed) P/Invokes the native "libz3" library.  Mono looks
-# for libz3.so next to the managed DLL, so we create a symlink from the Python
-# z3-solver package if it is missing.
-_Z3_MANAGED_DIR = os.path.join(
-    os.path.expanduser("~"),
-    ".nuget", "packages", "microsoft.z3", "4.12.2",
-    "lib", "netstandard2.0",
-)
-if sys.platform == "linux":
-    _link = os.path.join(_Z3_MANAGED_DIR, "libz3.so")
-    if not os.path.exists(_link):
-        import z3 as _z3_pkg
-        _z3_native = os.path.join(os.path.dirname(_z3_pkg.__file__), "lib", "libz3.so")
-        if os.path.isfile(_z3_native):
-            os.symlink(_z3_native, _link)
-
-clr.AddReference(os.path.join(_Z3_MANAGED_DIR, "Microsoft.Z3"))
-
-# Load CPORLib the same way up_cpor.converter does.
-import up_cpor.converter  # noqa: F401 – triggers clr.AddReference
+import up_cpor.converter  # noqa: F401 – loads CPORLib.dll and ensures Z3 native lib
 
 from CPORLib.PlanningModel import Domain, Problem
 from CPORLib.LogicalUtilities import (
