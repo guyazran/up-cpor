@@ -1,6 +1,6 @@
 {
-  "goal_after": null,
-  "goal_before": null,
+  "goal_after": false,
+  "goal_before": false,
   "steps": 3,
   "trace": [
     {

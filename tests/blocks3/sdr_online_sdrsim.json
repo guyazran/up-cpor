@@ -1,5 +1,5 @@
 {
-  "goal_reached": null,
+  "goal_reached": true,
   "steps": 3,
   "trace": [
     {

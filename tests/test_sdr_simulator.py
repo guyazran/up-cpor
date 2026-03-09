@@ -37,7 +37,7 @@ SCRIPTED_ACTIONS = {
     ],
 }
 
-CHECK_GOAL = {"blocks2": True, "blocks3": False, "blocks7": False, "doors5": True}
+CHECK_GOAL = {"blocks2": True, "blocks3": True, "blocks7": True, "doors5": True}
 
 
 def _parse_problem(domain: str):
@@ -85,3 +85,23 @@ def test_sdr_simulator_scripted_trace_matches_snapshot(domain: str):
     actual = _run_scripted_simulator_trace(problem, domain)
     snapshot_path = TESTS_DIR / domain / "sdr_simulator_scripted.json"
     assert_json_snapshot(actual, snapshot_path, f"{domain}[SDRSimulator-scripted]")
+
+
+@pytest.mark.parametrize("domain", DOMAINS)
+def test_goal_reached_returns_bool(domain: str):
+    """GoalReached must check the concrete state, not the belief state.
+
+    A previous bug had Simulator.GoalReached delegate to
+    PartiallySpecifiedState.IsGoalState(), which falls through to a SAT
+    solver that depends on the Microsoft.Solver.Foundation assembly which is
+    only automatically available on Windows. The fix is to move the solver
+    DLL at installation time to the package directory.
+    """
+    reset_sdr_seeds(0)
+    problem = _parse_problem(domain)
+    simulator = SDRSimulator(problem)
+
+    result = simulator.is_goal_reached()
+    assert isinstance(result, bool), (
+        f"is_goal_reached() returned {type(result).__name__}, expected bool"
+    )
