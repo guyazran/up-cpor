@@ -45,9 +45,25 @@ SCRIPTED_ACTIONS = {
         ("cd-down", ("sub1", "sub11")),
         ("ls", ("sub11", "my-file")),
     ],
+    "wumpus05": [
+        ("smell_wumpus", ("p1-1",)),
+        ("feel-breeze", ("p1-1",)),
+        ("move", ("p1-1", "p1-2")),
+        ("feel-breeze", ("p1-2",)),
+        ("move", ("p1-2", "p2-2")),
+        ("smell_wumpus", ("p2-2",)),
+    ],
 }
 
-CHECK_GOAL = {"blocks2": True, "blocks3": True, "blocks7": True, "colorballs2-2": True, "doors5": True, "unix1": True}
+CHECK_GOAL = {
+    "blocks2": True,
+    "blocks3": True,
+    "blocks7": True,
+    "colorballs2-2": True,
+    "doors5": True,
+    "unix1": True,
+    "wumpus05": True,
+}
 
 
 def _make_action_instance(problem, action_name: str, obj_names):
