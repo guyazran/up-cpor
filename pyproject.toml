@@ -14,7 +14,7 @@ authors = [
 ]
 dependencies = [
     "pythonnet==3.0.5",
-    "unified-planning @ git+https://github.com/aiplan4eu/unified-planning@c1b5cced4123e1b03e662b4e0a0bcc2c9b85f745",
+    "unified-planning @ git+https://github.com/aiplan4eu/unified-planning@fa635c0fb4debb47f22c5bd1af4dc2559be861fa",
     "pysmt",
     "z3-solver",
 ]
