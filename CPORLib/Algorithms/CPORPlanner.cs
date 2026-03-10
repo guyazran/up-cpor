@@ -618,8 +618,8 @@ namespace CPORLib.Algorithms
 
             int cNodes = dNodes.Count + dObservationNodes.Count;
 
-            pssCurrent.ApplyOffline(nCurrent.Action, out bool bPreconditionFailed, out psTrueState, out psFalseState);
-            if (bPreconditionFailed || psTrueState == null)
+            pssCurrent.ApplyOffline(nCurrent.Action, out bool bPreconditionFailed, out psTrueState, out psFalseState, true);
+            if (bPreconditionFailed || (psTrueState == null && psFalseState == null))
             {
                 Debug.WriteLine("BUG");
                 return;
