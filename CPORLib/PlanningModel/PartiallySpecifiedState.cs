@@ -3092,6 +3092,22 @@ namespace CPORLib.PlanningModel
             }
         }
 
+        private static bool SamePredicates(GenericArraySet<Predicate> first, GenericArraySet<Predicate> second)
+        {
+            if (ReferenceEquals(first, second))
+                return true;
+            if (first == null || second == null)
+                return first == second;
+            if (first.Count != second.Count)
+                return false;
+            foreach (Predicate p in first)
+            {
+                if (!second.Contains(p))
+                    return false;
+            }
+            return true;
+        }
+
         public static int amount_of_offline_pruned_states = 0;
         TimeSpan tsInIsClosed = new TimeSpan();
         public bool IsClosedState(List<PartiallySpecifiedState> lClosedStates)
@@ -3104,11 +3120,20 @@ namespace CPORLib.PlanningModel
 
             foreach (PartiallySpecifiedState pssClosed in lClosedStates)
             {
+                if (!SamePredicates(m_lObserved, pssClosed.m_lObserved) ||
+                    !SamePredicates(m_lHidden, pssClosed.m_lHidden))
+                    continue;
+
                 bool bKnownContained = pssClosed.m_lOfflinePredicatesKnown == null ||
                     pssClosed.m_lOfflinePredicatesKnown.Count == 0 ||
                     pssClosed.m_lOfflinePredicatesKnown.IsSubsetOf(m_lObserved);
                 if (bKnownContained && pssClosed.m_lOfflinePredicatesUnknown.Count == 0)
                 {
+                    bool bConsistentWith = true;
+                    if (pssClosed.m_dRequiredObservationsForReasoning != null)
+                        bConsistentWith = ConsistentWith(pssClosed.m_dRequiredObservationsForReasoning);
+                    if (!bConsistentWith)
+                        continue;
 
                     //  if (pssClosed.ID == 50)
                     //     Debug.WriteLine("d");
@@ -3264,4 +3289,3 @@ namespace CPORLib.PlanningModel
 
     }
 }
-
