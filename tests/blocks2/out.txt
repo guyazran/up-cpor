@@ -4,8 +4,6 @@ digraph contingent_plan {
 	3 [label="1)move-t-to-b~b1~b2"];
 	4 [label="2)move-to-t~b2~b1"];
 	5 [label="3) Goal"];
-	6 [label="4)move-t-to-b~b1~b2"];
-	7 [label="5) Goal"];
 	1 [label="False" ,shape="box"];
 	2 [label="True" ,shape="box"];
 	0 -> 1;
@@ -13,7 +11,6 @@ digraph contingent_plan {
 	0 -> 2;
 	2 -> 3;
 	3 -> 5;
-	6 -> 7;
-	4 -> 6;
+	4 -> 3;
 	_nil -> 0 [label=""];
 }

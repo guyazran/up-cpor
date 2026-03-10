@@ -24,6 +24,8 @@ def _build_closed_state_case(
     required_observation: tuple[str, str] | None,
     *,
     matching_belief: bool = True,
+    extra_current_observation: str | None = None,
+    known_dependencies: tuple[str, ...] = (),
 ):
     env = up_environment.Environment()
     expr_manager = env.expression_manager
@@ -64,6 +66,11 @@ def _build_closed_state_case(
 
     closed_state.m_lOfflinePredicatesKnown = GenericArraySet[Predicate]()
     closed_state.m_lOfflinePredicatesUnknown = GenericArraySet[Predicate]()
+    for dependency in known_dependencies:
+        closed_state.m_lOfflinePredicatesKnown.Add(observed_a if dependency == "a" else observed_b)
+
+    if extra_current_observation == "b":
+        _, _, current_state, _ = current_state.ApplyOffline("sense_b")
 
     if required_observation is not None:
         reasoned_name, required_name = required_observation
@@ -112,3 +119,14 @@ def test_is_closed_state_rejects_non_identical_belief_snapshots():
     )
 
     assert not current_state.IsClosedState(closed_states)
+
+
+def test_is_closed_state_reuses_when_extra_observations_are_irrelevant_to_dependencies():
+    current_state, closed_states, sentinel_plan = _build_closed_state_case(
+        required_observation=None,
+        extra_current_observation="b",
+        known_dependencies=("a",),
+    )
+
+    assert current_state.IsClosedState(closed_states)
+    assert current_state.Plan.ID == sentinel_plan.ID

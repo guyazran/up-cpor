@@ -3072,6 +3072,8 @@ namespace CPORLib.PlanningModel
         private void CopyClosedState(PartiallySpecifiedState pssClosed)
         {
             Plan = pssClosed.Plan;
+            if (HasTrackedReuseDependencies(pssClosed))
+                Plan.CaptureValidationDependencies(pssClosed.m_lOfflinePredicatesKnown, pssClosed.m_lOfflinePredicatesUnknown);
 
             //if (Plan.ID == 95)
             //    Debug.Write("*");
@@ -3108,6 +3110,12 @@ namespace CPORLib.PlanningModel
             return true;
         }
 
+        private static bool HasTrackedReuseDependencies(PartiallySpecifiedState pssClosed)
+        {
+            return (pssClosed.m_lOfflinePredicatesKnown != null && pssClosed.m_lOfflinePredicatesKnown.Count > 0) ||
+                   (pssClosed.m_lOfflinePredicatesUnknown != null && pssClosed.m_lOfflinePredicatesUnknown.Count > 0);
+        }
+
         public static int amount_of_offline_pruned_states = 0;
         TimeSpan tsInIsClosed = new TimeSpan();
         public bool IsClosedState(List<PartiallySpecifiedState> lClosedStates)
@@ -3120,8 +3128,9 @@ namespace CPORLib.PlanningModel
 
             foreach (PartiallySpecifiedState pssClosed in lClosedStates)
             {
-                if (!SamePredicates(m_lObserved, pssClosed.m_lObserved) ||
-                    !SamePredicates(m_lHidden, pssClosed.m_lHidden))
+                if (!HasTrackedReuseDependencies(pssClosed) &&
+                    (!SamePredicates(m_lObserved, pssClosed.m_lObserved) ||
+                     !SamePredicates(m_lHidden, pssClosed.m_lHidden)))
                     continue;
 
                 bool bKnownContained = pssClosed.m_lOfflinePredicatesKnown == null ||
