@@ -27,7 +27,11 @@ from unified_planning.plans.contingent_plan import ContingentPlanNode
 import unified_planning as up
 from unified_planning.shortcuts import Bool
 
-from typing import Dict
+from typing import Dict, Optional, Set
+
+
+class CporPlanGraphError(RuntimeError):
+    pass
 
 class UpCporConverter:
 
@@ -173,22 +177,65 @@ class UpCporConverter:
             d.AddAction(pa)
         return d
 
-    def createActionTree(self, solution, problem) -> ContingentPlanNode:
-        if solution is not None:
-            ai = self.__convert_CPOR_string_to_action_instance(str(solution.Action), problem)
-            if ai:
-                root = ContingentPlanNode(ai)
-                obser = self.__convert_string_to_observation(str(solution.Action), problem)
-                if solution.SingleChild:
-                    root.add_child({}, self.createActionTree(solution.SingleChild, problem))
-                if solution.FalseObservationChild and obser:
+    def createActionTree(self, solution, problem) -> Optional[ContingentPlanNode]:
+        if solution is None:
+            return None
+        return self.__create_action_tree(solution, problem, {}, set())
+
+    def __create_action_tree(
+        self,
+        solution,
+        problem,
+        converted_nodes: Dict[int, ContingentPlanNode],
+        active_node_ids: Set[int],
+    ) -> Optional[ContingentPlanNode]:
+        if solution is None:
+            return None
+
+        node_id = self.__get_cpor_node_id(solution)
+        if node_id in active_node_ids:
+            raise CporPlanGraphError(f"Cycle detected while converting CPOR node {node_id}.")
+        cached_node = converted_nodes.get(node_id)
+        if cached_node is not None:
+            return cached_node
+
+        ai = self.__convert_CPOR_string_to_action_instance(str(solution.Action), problem)
+        if ai is None:
+            return None
+
+        root = ContingentPlanNode(ai)
+        converted_nodes[node_id] = root
+        active_node_ids.add(node_id)
+        try:
+            obser = self.__convert_string_to_observation(str(solution.Action), problem)
+            if solution.SingleChild:
+                child = self.__create_action_tree(
+                    solution.SingleChild, problem, converted_nodes, active_node_ids
+                )
+                if child is not None:
+                    root.add_child({}, child)
+            if solution.FalseObservationChild and obser:
+                child = self.__create_action_tree(
+                    solution.FalseObservationChild, problem, converted_nodes, active_node_ids
+                )
+                if child is not None:
                     observation = {obser: problem.environment.expression_manager.TRUE()}
-                    root.add_child(observation, self.createActionTree(solution.FalseObservationChild, problem))
-                if solution.TrueObservationChild and obser:
+                    root.add_child(observation, child)
+            if solution.TrueObservationChild and obser:
+                child = self.__create_action_tree(
+                    solution.TrueObservationChild, problem, converted_nodes, active_node_ids
+                )
+                if child is not None:
                     observation = {obser: problem.environment.expression_manager.FALSE()}
-                    root.add_child(observation, self.createActionTree(solution.TrueObservationChild, problem))
-                return root
-        return None
+                    root.add_child(observation, child)
+        finally:
+            active_node_ids.remove(node_id)
+        return root
+
+    def __get_cpor_node_id(self, solution) -> int:
+        if hasattr(solution, "ID"):
+            return int(solution.ID)
+        return id(solution)
 
     def __CreatePredicate(self, f, bAllParameters, lActionParameters) -> ParametrizedPredicate:
         if type(f) is Fluent:

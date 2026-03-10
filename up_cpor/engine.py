@@ -11,7 +11,7 @@ from unified_planning.model.contingent.contingent_problem import ContingentProbl
 from unified_planning.engines.results import PlanGenerationResultStatus, PlanGenerationResult
 
 from typing import Type, IO, Optional, Callable, Dict
-from up_cpor.converter import UpCporConverter
+from up_cpor.converter import CporPlanGraphError, UpCporConverter
 
 
 MetaCredits = Credits('Conitngent Planning Algorithms',
@@ -104,7 +104,10 @@ class CPORImpl(Engine, OneshotPlannerMixin):
         c_problem = self.cnv.createProblem(problem, c_domain)
 
         solution = self.cnv.createCPORPlan(c_domain, c_problem)
-        actions = self.cnv.createActionTree(solution, problem)
+        try:
+            actions = self.cnv.createActionTree(solution, problem)
+        except CporPlanGraphError:
+            return PlanGenerationResult(PlanGenerationResultStatus.INTERNAL_ERROR, None, self.name)
         if solution is None or actions is None:
             return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
 
@@ -173,7 +176,10 @@ class CPORMetaEngineImpl(MetaEngine, mixins.OneshotPlannerMixin):
         c_problem = self.cnv.createProblem(problem, c_domain)
 
         solution = self.cnv.createCPORPlan(c_domain, c_problem)
-        actions = self.cnv.createActionTree(solution, problem)
+        try:
+            actions = self.cnv.createActionTree(solution, problem)
+        except CporPlanGraphError:
+            return PlanGenerationResult(PlanGenerationResultStatus.INTERNAL_ERROR, None, self.name)
 
         if solution is None or actions is None:
             return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
@@ -253,6 +259,5 @@ class SDRImpl(Engine, ActionSelectorMixin):
         c_problem = self.cnv.createProblem(problem, c_domain)
         solver = self.cnv.createSDRSolver(c_domain, c_problem)
         return solver
-
 
 

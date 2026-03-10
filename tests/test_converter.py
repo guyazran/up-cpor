@@ -10,15 +10,28 @@ if sys.platform == "darwin":
 import pytest
 import unified_planning.environment as up_environment
 from unified_planning.model import Fluent, InstantaneousAction, Object, Problem
-from up_cpor.converter import UpCporConverter
+from unified_planning.model.contingent import SensingAction
+from unified_planning.model.contingent.contingent_problem import ContingentProblem
+from unified_planning.engines.results import PlanGenerationResultStatus
+
+from up_cpor.converter import CporPlanGraphError, UpCporConverter
+from up_cpor.engine import CPORImpl
 
 
 class _FakeCporPlanNode:
-    def __init__(self, action: str, single_child=None):
+    def __init__(
+        self,
+        action: str,
+        node_id: int,
+        single_child=None,
+        false_child=None,
+        true_child=None,
+    ):
         self.Action = action
+        self.ID = node_id
         self.SingleChild = single_child
-        self.FalseObservationChild = None
-        self.TrueObservationChild = None
+        self.FalseObservationChild = false_child
+        self.TrueObservationChild = true_child
 
 
 class _FakeSolver:
@@ -97,9 +110,38 @@ def _build_cpor_action(arity: int) -> str:
 
 def _build_linear_plan(arities: tuple[int, ...]):
     node = None
+    next_id = len(arities)
     for arity in reversed(arities):
-        node = _FakeCporPlanNode(_build_cpor_action(arity), single_child=node)
+        node = _FakeCporPlanNode(_build_cpor_action(arity), next_id, single_child=node)
+        next_id -= 1
     return node
+
+
+def _build_minimal_contingent_problem():
+    env = up_environment.Environment()
+    bool_type = env.type_manager.BoolType()
+    problem = ContingentProblem("engine_converter_error", env)
+    fluent = Fluent("obs", bool_type, environment=env)
+    problem.add_fluent(fluent, default_initial_value=False)
+
+    sense = SensingAction("sense", _env=env)
+    sense.add_observed_fluent(env.expression_manager.FluentExp(fluent))
+    problem.add_action(sense)
+    return problem
+
+
+class _BrokenConverter:
+    def createDomain(self, problem):
+        return object()
+
+    def createProblem(self, problem, domain):
+        return object()
+
+    def createCPORPlan(self, c_domain, c_problem):
+        return object()
+
+    def createActionTree(self, solution, problem):
+        raise CporPlanGraphError("Cycle detected while converting CPOR node 1.")
 
 
 def _assert_action_instance(node, arity: int):
@@ -132,6 +174,44 @@ def test_converter_create_action_tree_supports_linear_plan_mixed_arities():
             observation_map, child = node.children[0]
             assert observation_map == {}
             node = child
+
+
+def test_converter_create_action_tree_preserves_shared_subgraphs():
+    problem = _build_problem_for_arities((1, 2))
+    converter = UpCporConverter()
+    shared_child = _FakeCporPlanNode(_build_cpor_action(2), 2)
+    root = _FakeCporPlanNode(
+        _build_cpor_action(1),
+        1,
+        false_child=shared_child,
+        true_child=shared_child,
+    )
+
+    converted_root = converter.createActionTree(root, problem)
+
+    assert converted_root is not None
+    assert len(converted_root.children) == 2
+    assert converted_root.children[0][1] is converted_root.children[1][1]
+
+
+def test_converter_create_action_tree_rejects_cycles():
+    problem = _build_problem_for_arities((1,))
+    converter = UpCporConverter()
+    root = _FakeCporPlanNode(_build_cpor_action(1), 1)
+    root.SingleChild = root
+
+    with pytest.raises(CporPlanGraphError, match="Cycle detected"):
+        converter.createActionTree(root, problem)
+
+
+def test_cpor_engine_returns_internal_error_for_invalid_cpor_graph():
+    engine = CPORImpl()
+    engine.cnv = _BrokenConverter()
+
+    result = engine._solve(_build_minimal_contingent_problem())
+
+    assert result.status == PlanGenerationResultStatus.INTERNAL_ERROR
+    assert result.plan is None
 
 
 def test_converter_sdrupdate_forwards_boolean_observations_to_solver():
