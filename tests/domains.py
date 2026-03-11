@@ -8,6 +8,7 @@ DOMAINS = (
     "colorballs2-2",
     "doors5",
     "doors15",
+    "localize5",
     "unix1",
     "wumpus05",
 )
