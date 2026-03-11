@@ -7,7 +7,7 @@ from unified_planning.plans import ActionInstance
 from domains import DOMAINS, TESTS_DIR
 from up_test_utils import make_test_environment, parse_test_problem
 from up_cpor.simulator import SDRSimulator
-from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
+from sdr_test_utils import TEST_RANDOM_SEED, reset_test_seeds, normalize_observation, assert_json_snapshot
 
 # Set environment variables for Python.NET on macOS
 # using the Mono runtime installed via Homebrew.
@@ -74,9 +74,9 @@ def _make_action_instance(problem, action_name: str, obj_names):
 
 
 def _run_scripted_simulator_trace(problem, domain: str):
-    reset_sdr_seeds(0)
+    reset_test_seeds(TEST_RANDOM_SEED)
 
-    simulator = SDRSimulator(problem)
+    simulator = SDRSimulator(problem, random_seed=TEST_RANDOM_SEED)
     trace = []
     goal_before = None
     goal_after = None
@@ -118,10 +118,10 @@ def test_goal_reached_returns_bool(domain: str):
     only automatically available on Windows. The fix is to move the solver
     DLL at installation time to the package directory.
     """
-    reset_sdr_seeds(0)
+    reset_test_seeds(TEST_RANDOM_SEED)
     env = make_test_environment()
     problem = parse_test_problem(domain, env)
-    simulator = SDRSimulator(problem)
+    simulator = SDRSimulator(problem, random_seed=TEST_RANDOM_SEED)
 
     result = simulator.is_goal_reached()
     assert isinstance(result, bool), (

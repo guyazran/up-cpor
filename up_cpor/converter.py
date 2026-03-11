@@ -19,6 +19,7 @@ clr.AddReference(DLL_PATH)
 from CPORLib.PlanningModel import Domain, Problem, ParametrizedAction, PlanningAction, Simulator
 from CPORLib.LogicalUtilities import Predicate, ParametrizedPredicate, GroundedPredicate, PredicateFormula, CompoundFormula, Formula
 from CPORLib.Algorithms import CPORPlanner, SDRPlanner
+from CPORLib.Tools import RandomGenerator
 
 from unified_planning.model import FNode, OperatorKind, Fluent, Effect
 from unified_planning.model.contingent import SensingAction
@@ -34,6 +35,9 @@ class CporPlanGraphError(RuntimeError):
     pass
 
 class UpCporConverter:
+    @staticmethod
+    def set_random_seed(seed: int) -> None:
+        RandomGenerator.Init(int(seed))
 
     def createProblem(self, problem, domain):
         p = Problem(problem.name, domain)

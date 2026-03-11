@@ -1,15 +1,20 @@
 import os
 import re
+import random
 import sys
 from collections import Counter
 from pathlib import Path
 from typing import Dict
+
+from pysmt.environment import reset_env as reset_pysmt_env
 
 _EDGE_RE = re.compile(r"^\s*([A-Za-z0-9_]+)\s*->\s*([A-Za-z0-9_]+)\s*(?:\[[^\]]*\])?\s*;\s*$")
 _NODE_RE = re.compile(r"^\s*([A-Za-z0-9_]+)\s*\[(.*)\]\s*;\s*$")
 _LABEL_RE = re.compile(r'label\s*=\s*"([^"]*)"')
 _BOX_RE = re.compile(r'shape\s*=\s*"box"', re.IGNORECASE)
 _ID_PREFIX_RE = re.compile(r"^\s*\d+\)\s*")
+
+TEST_RANDOM_SEED = 0
 
 
 def sanitize_sys_path_for_pythonnet() -> None:
@@ -25,6 +30,15 @@ def sanitize_sys_path_for_pythonnet() -> None:
         return os.path.normpath(p) == workspace
 
     sys.path[:] = [p for p in sys.path if not is_workspace(p)]
+
+
+def reset_test_seeds(seed: int = TEST_RANDOM_SEED) -> None:
+    random.seed(seed)
+    reset_pysmt_env()
+
+    from up_cpor.converter import UpCporConverter
+
+    UpCporConverter.set_random_seed(seed)
 
 
 def parse_dot(path: Path) -> Dict[str, object]:

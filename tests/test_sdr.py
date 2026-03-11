@@ -12,7 +12,7 @@ from up_test_utils import (
 )
 from up_cpor.converter import UpCporConverter
 from up_cpor.simulator import SDRSimulator
-from sdr_test_utils import reset_sdr_seeds, normalize_observation, assert_json_snapshot
+from sdr_test_utils import TEST_RANDOM_SEED, reset_test_seeds, normalize_observation, assert_json_snapshot
 from CPORLib.Parsing import Parser
 
 # Set environment variables for Python.NET on macOS
@@ -31,9 +31,11 @@ SIMULATOR_CONFIG = {
     "wumpus05": {"max_steps": 20, "stop_on_goal": True},
 }
 
+SDR_PLANNER_PARAMS = {"random_seed": TEST_RANDOM_SEED}
+
 
 def _run_online_trace(problem, simulator_cls, max_steps: int, stop_on_goal: bool):
-    reset_sdr_seeds(0)
+    reset_test_seeds(TEST_RANDOM_SEED)
 
     all_action_names = {a.name for a in problem.actions}
     trace = []
@@ -43,9 +45,16 @@ def _run_online_trace(problem, simulator_cls, max_steps: int, stop_on_goal: bool
         if simulator_cls is DeterministicSimulatedExecutionEnvironment:
             simulator = simulator_cls(problem)
 
-        with problem.environment.factory.ActionSelector(problem=problem, name="SDRPlanning") as solver:
+        with problem.environment.factory.ActionSelector(
+            problem=problem,
+            name="SDRPlanning",
+            params=SDR_PLANNER_PARAMS,
+        ) as solver:
             if simulator is None:
-                simulator = simulator_cls(problem)
+                if simulator_cls is SDRSimulator:
+                    simulator = simulator_cls(problem, random_seed=TEST_RANDOM_SEED)
+                else:
+                    simulator = simulator_cls(problem)
             if stop_on_goal:
                 while (not simulator.is_goal_reached()) and len(trace) < max_steps:
                     action = solver.get_action()
@@ -108,7 +117,7 @@ def test_sdr_parser_rejects_malformed_grounded_observation():
 
 
 def test_sdr_direct_solver_replans_after_false_obj_at_observation():
-    reset_sdr_seeds(0)
+    reset_test_seeds(TEST_RANDOM_SEED)
     env = make_test_environment()
     problem = parse_test_problem("colorballs2-2", env)
     converter = UpCporConverter()

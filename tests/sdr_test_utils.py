@@ -1,37 +1,13 @@
 import difflib
 import json
-import random
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from pysmt.environment import reset_env as reset_pysmt_env
+from cpor_test_utils import TEST_RANDOM_SEED, reset_test_seeds
 
 
-def reset_sdr_seeds(seed: int = 0) -> None:
-    random.seed(seed)
-    reset_pysmt_env()
-
-    import System
-
-    asm = None
-    for candidate in System.AppDomain.CurrentDomain.GetAssemblies():
-        if candidate.GetName().Name == "CPORLib":
-            asm = candidate
-            break
-    assert asm is not None, "CPORLib assembly is not loaded."
-
-    rg_type = asm.GetType("CPORLib.Tools.RandomGenerator")
-    assert rg_type is not None, "CPORLib.Tools.RandomGenerator type is not available."
-
-    flags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic
-    init_method = None
-    for method in rg_type.GetMethods(flags):
-        if method.Name == "Init" and method.GetParameters().Length == 1:
-            init_method = method
-            break
-
-    assert init_method is not None, "CPORLib.Tools.RandomGenerator.Init(int) was not found."
-    init_method.Invoke(None, System.Array[System.Object]([System.Int32(seed)]))
+def reset_sdr_seeds(seed: int = TEST_RANDOM_SEED) -> None:
+    reset_test_seeds(seed)
 
 
 def normalize_observation(observation: Optional[Dict[Any, Any]]) -> Optional[List[List[Any]]]:

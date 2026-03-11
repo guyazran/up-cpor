@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from unified_planning.engines.results import PlanGenerationResultStatus
 
-from cpor_test_utils import parse_dot, assert_dot_equal
+from cpor_test_utils import TEST_RANDOM_SEED, parse_dot, assert_dot_equal, reset_test_seeds
 from domains import DOMAINS, TESTS_DIR
 from up_test_utils import make_test_environment, parse_test_problem
 
@@ -22,7 +22,7 @@ from CPORLib.Algorithms import CPORPlanner
 from System import Console
 from System.IO import TextWriter
 
-EXACT_PLAN_DOMAINS = tuple(domain for domain in DOMAINS if domain != "doors5")
+CPOR_PLANNER_PARAMS = {"random_seed": TEST_RANDOM_SEED}
 
 
 @contextmanager
@@ -36,6 +36,7 @@ def _suppress_cpor_console():
 
 
 def _run_cpor_and_write_dot(domain: str, output_path: Path):
+    reset_test_seeds(TEST_RANDOM_SEED)
     env = make_test_environment(cpor=True)
     problem = parse_test_problem(domain, env)
 
@@ -57,18 +58,14 @@ def test_cpor_plan_found(domain: str, tmp_path: Path):
     env = make_test_environment(cpor=True)
     problem = parse_test_problem(domain, env)
 
-    with env.factory.OneshotPlanner(name="CPORPlanning") as planner:
+    with env.factory.OneshotPlanner(name="CPORPlanning", params=CPOR_PLANNER_PARAMS) as planner:
         result = planner.solve(problem)
 
     assert result.status == PlanGenerationResultStatus.SOLVED_SATISFICING, (
         f"CPORPlanning failed to find a plan for {domain}: {result.status}"
     )
 
-
-# doors5 currently yields two valid shared-graph layouts depending on prior
-# planner activity in the same Python process, so keep it covered by the
-# plan-found and semantic validity checks only.
-@pytest.mark.parametrize("domain", EXACT_PLAN_DOMAINS)
+@pytest.mark.parametrize("domain", DOMAINS)
 def test_cpor_matches_expected_plan(domain: str, tmp_path: Path):
     domain_dir = TESTS_DIR / domain
     expected_dot = domain_dir / "out.txt"
@@ -86,3 +83,25 @@ def test_cpor_generated_plan_is_valid(domain: str, tmp_path: Path):
     actual_dot = tmp_path / f"{domain}_validity.dot"
     planner, solution = _run_cpor_and_write_dot(domain, actual_dot)
     assert planner.ValidatePlanGraph(solution), f"CPOR returned an invalid contingent plan for {domain}"
+
+
+def test_cpor_seeded_doors5_plan_is_reproducible_after_interleaved_solves(tmp_path: Path):
+    first_dot = tmp_path / "doors5_first.dot"
+    interleaved_dot = tmp_path / "blocks2_interleaved.dot"
+    second_dot = tmp_path / "doors5_second.dot"
+
+    _run_cpor_and_write_dot("doors5", first_dot)
+    _run_cpor_and_write_dot("blocks2", interleaved_dot)
+    _run_cpor_and_write_dot("doors5", second_dot)
+
+    assert_dot_equal(parse_dot(first_dot), parse_dot(second_dot), "doors5[seeded-repeat]")
+
+
+def test_cpor_seeded_doors5_matches_snapshot_after_prior_seeded_solves(tmp_path: Path):
+    for domain in ("blocks2", "blocks3", "blocks7", "colorballs2-2"):
+        _run_cpor_and_write_dot(domain, tmp_path / f"{domain}_prelude.dot")
+
+    actual_dot = tmp_path / "doors5_after_seeded_prelude.dot"
+    _run_cpor_and_write_dot("doors5", actual_dot)
+
+    assert_dot_equal(parse_dot(TESTS_DIR / "doors5" / "out.txt"), parse_dot(actual_dot), "doors5[seeded-prelude]")

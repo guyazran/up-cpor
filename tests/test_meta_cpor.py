@@ -12,17 +12,19 @@ from pathlib import Path
 import pytest
 from unified_planning.engines.results import PlanGenerationResultStatus
 
-from cpor_test_utils import parse_dot, assert_dot_equal
+from cpor_test_utils import TEST_RANDOM_SEED, parse_dot, assert_dot_equal, reset_test_seeds
 from domains import DOMAINS, TESTS_DIR
 from up_test_utils import make_test_environment, parse_test_problem
 
 CLASSICAL_PLANNERS = ("tamer", "pyperplan")
+META_CPOR_PLANNER_PARAMS = {"random_seed": TEST_RANDOM_SEED}
 
 
 def _run_meta_cpor_and_write_dot(domain: str, output_path: Path):
     from up_cpor.converter import UpCporConverter
     from CPORLib.Algorithms import CPORPlanner
 
+    reset_test_seeds(TEST_RANDOM_SEED)
     env = make_test_environment(meta_cpor=True)
     problem = parse_test_problem(domain, env)
 
@@ -44,7 +46,10 @@ def test_meta_cpor_plan_found(domain: str, classical_planner: str, tmp_path: Pat
     env = make_test_environment(meta_cpor=True)
     problem = parse_test_problem(domain, env)
 
-    with env.factory.OneshotPlanner(name=f"MetaCPORPlanning[{classical_planner}]") as planner:
+    with env.factory.OneshotPlanner(
+        name=f"MetaCPORPlanning[{classical_planner}]",
+        params=META_CPOR_PLANNER_PARAMS,
+    ) as planner:
         result = planner.solve(problem)
 
     assert result.status == PlanGenerationResultStatus.SOLVED_SATISFICING, (
