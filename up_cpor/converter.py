@@ -19,7 +19,7 @@ clr.AddReference(DLL_PATH)
 from CPORLib.PlanningModel import Domain, Problem, ParametrizedAction, PlanningAction, Simulator
 from CPORLib.LogicalUtilities import Predicate, ParametrizedPredicate, GroundedPredicate, PredicateFormula, CompoundFormula, Formula
 from CPORLib.Algorithms import CPORPlanner, SDRPlanner
-from CPORLib.Tools import RandomGenerator
+from CPORLib.Tools import RandomGenerator, Utilities
 
 from unified_planning.model import FNode, OperatorKind, Fluent, Effect
 from unified_planning.model.contingent import SensingAction
@@ -169,9 +169,10 @@ class UpCporConverter:
             if not a.effects is None and len(a.effects) > 0:
                 cp = CompoundFormula("and")
                 for eff in a.effects:
-                    pp = self.__CreatePredicate(eff, False, l)
-                    cp.SimpleAddOperand(pp)
-                pa.Effects = cp
+                    f_eff = self.__CreateEffectFormula(eff, l)
+                    cp.SimpleAddOperand(f_eff)
+                if len(cp.Operands) > 0:
+                    pa.SetEffects(cp)
             if type(a) is SensingAction:
                 if not a.observed_fluents is None:
                     for o in a.observed_fluents:
@@ -256,8 +257,10 @@ class UpCporConverter:
             return pp
         if type(f) is Effect:
             pp = self.__CreatePredicate(f.fluent, bAllParameters, lActionParameters)
-            if str(f.value) == "false":
+            if self.__is_false_formula_value(f.value):
                 pp.Negation = True
+            elif not self.__is_true_formula_value(f.value):
+                raise ValueError(f"Unsupported effect value: {f.value!r}")
             return pp
         if type(f) is FNode:
             if (not bAllParameters) and (lActionParameters is None or len(lActionParameters) == 0):
@@ -273,27 +276,70 @@ class UpCporConverter:
                     pp.AddConstant(obj.name, obj.type.name)
             return pp
 
+    def __CreateEffectFormula(self, effect: Effect, lActionParameters) -> Optional[Formula]:
+        if not effect.is_assignment():
+            raise NotImplementedError(f"Unsupported effect kind: {effect!r}")
+        if effect.is_forall():
+            raise NotImplementedError(f"Universal conditional effects are not supported: {effect!r}")
+
+        effect_formula = PredicateFormula(self.__CreatePredicate(effect, False, lActionParameters))
+        if not effect.is_conditional():
+            return effect_formula
+
+        condition_formula = self.__CreateFormula(effect.condition, lActionParameters)
+        if self.__is_true_formula(condition_formula):
+            return effect_formula
+        if self.__is_false_formula(condition_formula):
+            return None
+
+        when_formula = CompoundFormula("when")
+        when_formula.AddOperand(condition_formula)
+        when_formula.AddOperand(effect_formula)
+        return when_formula
+
     def __CreateFormula(self, n: FNode, lActionParameters) -> Formula:
+        if n.node_type == OperatorKind.BOOL_CONSTANT:
+            predicate = Utilities.TRUE_PREDICATE if n.is_true() else Utilities.FALSE_PREDICATE
+            return PredicateFormula(predicate)
         if n.node_type == OperatorKind.FLUENT_EXP:
             pp = self.__CreatePredicate(n, False, lActionParameters)
             pf = PredicateFormula(pp)
             return pf
-        else:
-            if n.node_type == OperatorKind.AND:
-                cp = CompoundFormula("and")
-            elif n.node_type == OperatorKind.OR:
-                cp = CompoundFormula("or")
-            elif n.node_type == OperatorKind.NOT:
-                cp = self.__CreateFormula(n.args[0], lActionParameters)
-                cp = cp.Negate()
-                return cp
-            else:
-                cp = CompoundFormula("oneof")
-
-            for nSub in n.args:
-                fSub = self.__CreateFormula(nSub, lActionParameters)
-                cp.SimpleAddOperand(fSub)
+        if n.node_type == OperatorKind.AND:
+            cp = CompoundFormula("and")
+        elif n.node_type == OperatorKind.OR:
+            cp = CompoundFormula("or")
+        elif n.node_type == OperatorKind.NOT:
+            cp = self.__CreateFormula(n.args[0], lActionParameters)
+            cp = cp.Negate()
             return cp
+        else:
+            raise NotImplementedError(f"Unsupported formula node type: {n.node_type}")
+
+        for nSub in n.args:
+            fSub = self.__CreateFormula(nSub, lActionParameters)
+            cp.SimpleAddOperand(fSub)
+        return cp
+
+    def __is_true_formula_value(self, value) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, FNode):
+            return value.is_true()
+        return False
+
+    def __is_false_formula_value(self, value) -> bool:
+        if isinstance(value, bool):
+            return not value
+        if isinstance(value, FNode):
+            return value.is_false()
+        return False
+
+    def __is_true_formula(self, formula: Formula) -> bool:
+        return isinstance(formula, PredicateFormula) and formula.Predicate == Utilities.TRUE_PREDICATE
+
+    def __is_false_formula(self, formula: Formula) -> bool:
+        return isinstance(formula, PredicateFormula) and formula.Predicate == Utilities.FALSE_PREDICATE
 
     def __CreateOrFormula(self, n, lActionParameters) -> Formula:
         cp = CompoundFormula("or")
