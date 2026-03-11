@@ -40,6 +40,10 @@ SCRIPTED_ACTIONS = {
         ("sense-door", ("p1-3", "p1-2")),
         ("sense-door", ("p1-3", "p2-3")),
     ],
+    "doors15": [
+        ("sense-door", ("p1-8", "p1-7")),
+        ("sense-door", ("p1-8", "p2-8")),
+    ],
     "unix1": [
         ("cd-down", ("root", "sub1")),
         ("cd-down", ("sub1", "sub11")),
@@ -61,6 +65,7 @@ CHECK_GOAL = {
     "blocks7": True,
     "colorballs2-2": True,
     "doors5": True,
+    "doors15": True,
     "unix1": True,
     "wumpus05": True,
 }

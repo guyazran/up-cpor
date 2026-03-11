@@ -30,6 +30,48 @@ def parse_test_problem(domain: str, env):
 
 
 class DeterministicSimulatedExecutionEnvironment(SimulatedExecutionEnvironment):
+    _MAX_ENUMERATED_MODEL_COUNT = 100_000
+    _MIN_SYMBOLS_FOR_SCALABLE_FALLBACK = 100
+
+    def _estimate_model_count_upper_bound(self, problem) -> int:
+        count = 1
+
+        for constraint in problem.oneof_constraints:
+            count *= len(constraint)
+            if count > self._MAX_ENUMERATED_MODEL_COUNT:
+                return count
+
+        for constraint in problem.or_constraints:
+            count *= (2 ** len(constraint)) - 1
+            if count > self._MAX_ENUMERATED_MODEL_COUNT:
+                return count
+
+        return count
+
+    def _sample_deterministic_model_without_enumeration(self, formula, symbols):
+        from pysmt.shortcuts import Not, Solver
+
+        fixed_assignments = []
+        sampled_model = {}
+
+        with Solver(name="z3") as solver:
+            solver.add_assertion(formula)
+
+            for symbol in symbols:
+                prefer_true = random.choice((True, False))
+                preferred_literal = symbol if prefer_true else Not(symbol)
+                fallback_literal = Not(symbol) if prefer_true else symbol
+
+                if solver.solve(assumptions=[*fixed_assignments, preferred_literal]):
+                    fixed_assignments.append(preferred_literal)
+                    sampled_model[symbol] = prefer_true
+                else:
+                    assert solver.solve(assumptions=[*fixed_assignments, fallback_literal])
+                    fixed_assignments.append(fallback_literal)
+                    sampled_model[symbol] = not prefer_true
+
+        return sampled_model
+
     def _randomly_set_full_initial_state(self, problem):
         from pysmt.shortcuts import And, ExactlyOne, Not, Or, Symbol
 
@@ -64,16 +106,34 @@ class DeterministicSimulatedExecutionEnvironment(SimulatedExecutionEnvironment):
                 break
 
         symbols = sorted(symbol_to_fnode.keys(), key=lambda symbol: symbol.symbol_name())
-        models = list(all_smt(And(constraints), symbols))
-        models.sort(
-            key=lambda model: tuple((symbol.symbol_name(), str(model[symbol])) for symbol in symbols)
+        formula = And(constraints)
+
+        # Enumerating all satisfying assignments is stable for the existing small
+        # regression domains. Only switch to the scalable path for genuinely large
+        # uncertainty spaces such as doors15, where the initial uncertainty is
+        # roughly 15^7.
+        should_enumerate_all_models = (
+            len(symbols) < self._MIN_SYMBOLS_FOR_SCALABLE_FALLBACK
+            or self._estimate_model_count_upper_bound(problem) <= self._MAX_ENUMERATED_MODEL_COUNT
         )
-        sampled_model = random.choice(models)
+
+        if should_enumerate_all_models:
+            models = list(all_smt(formula, symbols))
+            models.sort(
+                key=lambda model: tuple((symbol.symbol_name(), str(model[symbol])) for symbol in symbols)
+            )
+            sampled_model = random.choice(models)
+        else:
+            sampled_model = self._sample_deterministic_model_without_enumeration(formula, symbols)
 
         for symbol in symbols:
             value = sampled_model[symbol]
-            assert value.is_bool_constant()
-            self._deterministic_problem.set_initial_value(symbol_to_fnode[symbol], value.is_true())
+            if hasattr(value, "is_bool_constant"):
+                assert value.is_bool_constant()
+                bool_value = value.is_true()
+            else:
+                bool_value = bool(value)
+            self._deterministic_problem.set_initial_value(symbol_to_fnode[symbol], bool_value)
 
 
 @contextmanager
