@@ -1,8 +1,6 @@
 import pytest
 
-from cpor_test_utils import TEST_RANDOM_SEED, reset_test_seeds, sanitize_sys_path_for_pythonnet
-
-sanitize_sys_path_for_pythonnet()
+from cpor_test_utils import TEST_RANDOM_SEED, reset_test_seeds
 
 
 @pytest.fixture(autouse=True)

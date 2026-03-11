@@ -17,21 +17,6 @@ _ID_PREFIX_RE = re.compile(r"^\s*\d+\)\s*")
 TEST_RANDOM_SEED = 0
 
 
-def sanitize_sys_path_for_pythonnet() -> None:
-    # The CPORLib/ C# source directory at the workspace root would shadow the
-    # .NET assembly namespace loaded via pythonnet when pytest inserts the rootdir
-    # into sys.path (including as '' = CWD). Remove those entries early so CLR
-    # imports resolve correctly via the installed package in site-packages.
-    workspace = os.path.normpath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-    def is_workspace(p: str) -> bool:
-        if not p:  # empty string means CWD
-            return os.path.normpath(os.getcwd()) == workspace
-        return os.path.normpath(p) == workspace
-
-    sys.path[:] = [p for p in sys.path if not is_workspace(p)]
-
-
 def reset_test_seeds(seed: int = TEST_RANDOM_SEED) -> None:
     random.seed(seed)
     reset_pysmt_env()

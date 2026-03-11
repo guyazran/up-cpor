@@ -19,20 +19,8 @@ from up_test_utils import make_test_environment, parse_test_problem
 
 from up_cpor.converter import UpCporConverter
 from CPORLib.Algorithms import CPORPlanner
-from System import Console
-from System.IO import TextWriter
 
 CPOR_PLANNER_PARAMS = {"random_seed": TEST_RANDOM_SEED}
-
-
-@contextmanager
-def _suppress_cpor_console():
-    original_stdout = Console.Out
-    Console.SetOut(TextWriter.Null)
-    try:
-        yield
-    finally:
-        Console.SetOut(original_stdout)
 
 
 def _run_cpor_and_write_dot(domain: str, output_path: Path):
@@ -45,8 +33,7 @@ def _run_cpor_and_write_dot(domain: str, output_path: Path):
     c_problem = converter.createProblem(problem, c_domain)
 
     planner = CPORPlanner(c_domain, c_problem)
-    with _suppress_cpor_console():
-        solution = planner.OfflinePlanning()
+    solution = planner.OfflinePlanning()
     assert solution is not None, f"CPOR failed to find a solution for {domain}"
 
     planner.WritePlan(str(output_path), solution)
