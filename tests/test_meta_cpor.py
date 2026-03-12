@@ -7,12 +7,10 @@ if sys.platform == "darwin":
     os.environ["PYTHONNET_RUNTIME"] = "mono"
     os.environ["PYTHONNET_MONO_LIBMONO"] = "/opt/homebrew/opt/mono/lib/libmonosgen-2.0.dylib"
 
-from pathlib import Path
-
 import pytest
 from unified_planning.engines.results import PlanGenerationResultStatus
 
-from cpor_test_utils import TEST_RANDOM_SEED, parse_dot, assert_dot_equal, reset_test_seeds
+from cpor_test_utils import TEST_RANDOM_SEED, assert_dot_equal, parse_expected_dot, solve_cpor_offline
 from domains import DOMAINS, TESTS_DIR
 from up_test_utils import make_test_environment, parse_test_problem
 
@@ -20,29 +18,9 @@ CLASSICAL_PLANNERS = ("tamer", "pyperplan")
 META_CPOR_PLANNER_PARAMS = {"random_seed": TEST_RANDOM_SEED}
 
 
-def _run_meta_cpor_and_write_dot(domain: str, output_path: Path):
-    from up_cpor.converter import UpCporConverter
-    from CPORLib.Algorithms import CPORPlanner
-
-    reset_test_seeds(TEST_RANDOM_SEED)
-    env = make_test_environment(meta_cpor=True)
-    problem = parse_test_problem(domain, env)
-
-    converter = UpCporConverter()
-    c_domain = converter.createDomain(problem)
-    c_problem = converter.createProblem(problem, c_domain)
-
-    planner = CPORPlanner(c_domain, c_problem)
-    solution = planner.OfflinePlanning()
-    assert solution is not None, f"Meta CPOR underlying planner failed for {domain}"
-
-    planner.WritePlan(str(output_path), solution)
-    return planner, solution
-
-
 @pytest.mark.parametrize("classical_planner", CLASSICAL_PLANNERS)
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_meta_cpor_plan_found(domain: str, classical_planner: str, tmp_path: Path):
+def test_meta_cpor_plan_found(domain: str, classical_planner: str):
     env = make_test_environment(meta_cpor=True)
     problem = parse_test_problem(domain, env)
 
@@ -59,23 +37,18 @@ def test_meta_cpor_plan_found(domain: str, classical_planner: str, tmp_path: Pat
 
 @pytest.mark.parametrize("classical_planner", CLASSICAL_PLANNERS)
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_meta_cpor_matches_expected_plan(domain: str, classical_planner: str, tmp_path: Path):
+def test_meta_cpor_matches_expected_plan(domain: str, classical_planner: str):
     domain_dir = TESTS_DIR / domain
     expected_dot = domain_dir / "out.txt"
     assert expected_dot.exists(), f"Missing expected output: {expected_dot}"
 
-    actual_dot = tmp_path / f"{domain}_{classical_planner}_actual.dot"
-    _run_meta_cpor_and_write_dot(domain, actual_dot)
-    assert actual_dot.exists(), f"CPOR did not produce output DOT for {domain}"
-
-    assert_dot_equal(parse_dot(expected_dot), parse_dot(actual_dot), f"{domain}[{classical_planner}]")
+    actual_dot = solve_cpor_offline(domain)["dot_graph"]
+    assert_dot_equal(parse_expected_dot(domain), actual_dot, f"{domain}[{classical_planner}]")
 
 
 @pytest.mark.parametrize("classical_planner", CLASSICAL_PLANNERS)
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_meta_cpor_generated_plan_is_valid(domain: str, classical_planner: str, tmp_path: Path):
-    actual_dot = tmp_path / f"{domain}_{classical_planner}_validity.dot"
-    planner, solution = _run_meta_cpor_and_write_dot(domain, actual_dot)
-    assert planner.ValidatePlanGraph(solution), (
+def test_meta_cpor_generated_plan_is_valid(domain: str, classical_planner: str):
+    assert solve_cpor_offline(domain)["is_valid"], (
         f"MetaCPOR[{classical_planner}] returned an invalid contingent plan for {domain}"
     )

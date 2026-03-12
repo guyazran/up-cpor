@@ -1,5 +1,6 @@
 import random
 from contextlib import contextmanager
+from functools import lru_cache
 
 import unified_planning.environment as up_environment
 from unified_planning.io import PDDLReader
@@ -9,7 +10,8 @@ from unified_planning.model.contingent.execution_environment import all_smt
 from domains import TESTS_DIR
 
 
-def make_test_environment(*, sdr: bool = False, cpor: bool = False, meta_cpor: bool = False):
+@lru_cache(maxsize=None)
+def _make_cached_test_environment(sdr: bool, cpor: bool, meta_cpor: bool):
     env = up_environment.Environment()
     env.credits_stream = None
 
@@ -20,13 +22,30 @@ def make_test_environment(*, sdr: bool = False, cpor: bool = False, meta_cpor: b
     if meta_cpor:
         env.factory.add_meta_engine("MetaCPORPlanning", "up_cpor.engine", "CPORMetaEngineImpl")
 
+    env._test_cache_key = (sdr, cpor, meta_cpor)
     return env
 
 
-def parse_test_problem(domain: str, env):
+def make_test_environment(*, sdr: bool = False, cpor: bool = False, meta_cpor: bool = False):
+    return _make_cached_test_environment(sdr, cpor, meta_cpor)
+
+
+@lru_cache(maxsize=None)
+def _parse_cached_test_problem(domain: str, sdr: bool, cpor: bool, meta_cpor: bool):
+    env = _make_cached_test_environment(sdr, cpor, meta_cpor)
     reader = PDDLReader(env)
     domain_dir = TESTS_DIR / domain
     return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
+
+
+def parse_test_problem(domain: str, env):
+    cache_key = getattr(env, "_test_cache_key", None)
+    if cache_key is None:
+        reader = PDDLReader(env)
+        domain_dir = TESTS_DIR / domain
+        return reader.parse_problem(str(domain_dir / "d.pddl"), str(domain_dir / "p.pddl"))
+
+    return _parse_cached_test_problem(domain, *cache_key).clone()
 
 
 class DeterministicSimulatedExecutionEnvironment(SimulatedExecutionEnvironment):

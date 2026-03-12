@@ -1,6 +1,5 @@
 import os
 import sys
-from contextlib import contextmanager
 
 # Set environment variables for Python.NET on macOS
 # using the Mono runtime installed via Homebrew.
@@ -13,7 +12,14 @@ from pathlib import Path
 import pytest
 from unified_planning.engines.results import PlanGenerationResultStatus
 
-from cpor_test_utils import TEST_RANDOM_SEED, parse_dot, assert_dot_equal, reset_test_seeds
+from cpor_test_utils import (
+    TEST_RANDOM_SEED,
+    assert_dot_equal,
+    parse_dot,
+    parse_expected_dot,
+    reset_test_seeds,
+    solve_cpor_offline,
+)
 from domains import DOMAINS, TESTS_DIR
 from up_test_utils import make_test_environment, parse_test_problem
 
@@ -41,7 +47,7 @@ def _run_cpor_and_write_dot(domain: str, output_path: Path):
 
 
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_cpor_plan_found(domain: str, tmp_path: Path):
+def test_cpor_plan_found(domain: str):
     env = make_test_environment(cpor=True)
     problem = parse_test_problem(domain, env)
 
@@ -53,23 +59,18 @@ def test_cpor_plan_found(domain: str, tmp_path: Path):
     )
 
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_cpor_matches_expected_plan(domain: str, tmp_path: Path):
+def test_cpor_matches_expected_plan(domain: str):
     domain_dir = TESTS_DIR / domain
     expected_dot = domain_dir / "out.txt"
     assert expected_dot.exists(), f"Missing expected output: {expected_dot}"
 
-    actual_dot = tmp_path / f"{domain}_actual.dot"
-    _run_cpor_and_write_dot(domain, actual_dot)
-    assert actual_dot.exists(), f"CPOR did not produce output DOT for {domain}"
-
-    assert_dot_equal(parse_dot(expected_dot), parse_dot(actual_dot), domain)
+    actual_dot = solve_cpor_offline(domain)["dot_graph"]
+    assert_dot_equal(parse_expected_dot(domain), actual_dot, domain)
 
 
 @pytest.mark.parametrize("domain", DOMAINS)
-def test_cpor_generated_plan_is_valid(domain: str, tmp_path: Path):
-    actual_dot = tmp_path / f"{domain}_validity.dot"
-    planner, solution = _run_cpor_and_write_dot(domain, actual_dot)
-    assert planner.ValidatePlanGraph(solution), f"CPOR returned an invalid contingent plan for {domain}"
+def test_cpor_generated_plan_is_valid(domain: str):
+    assert solve_cpor_offline(domain)["is_valid"], f"CPOR returned an invalid contingent plan for {domain}"
 
 
 def test_cpor_seeded_doors5_plan_is_reproducible_after_interleaved_solves(tmp_path: Path):
