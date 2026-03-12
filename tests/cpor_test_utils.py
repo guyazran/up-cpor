@@ -1,7 +1,6 @@
 import os
 import re
 import random
-import sys
 from collections import Counter
 from functools import lru_cache
 from pathlib import Path

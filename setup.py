@@ -7,8 +7,6 @@ from setuptools import setup
 from setuptools.command.install import install
 import shutil
 import os
-import subprocess
-import sys
 
 
 class CustomInstallCommand(install):
