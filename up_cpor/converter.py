@@ -393,7 +393,7 @@ class UpCporConverter:
             ob = string.replace(")", "").replace("(", "")
             obs = ob.split()
             if obs[0] == "not":
-                obs.remove("not")
+                obs = obs[1:]
                 boolean = False
             else:
                 boolean = True
