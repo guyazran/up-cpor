@@ -577,7 +577,7 @@ namespace CPORLib.Parsing
             if (bParametrized)
             {
                 if (!MatchParametersToPredicateDeclaration((ParametrizedPredicate)p, d))
-                    throw new Exception("Paramter does not match predicate declaration " + p);
+                    throw new Exception("Parameter does not match predicate declaration " + p);
             }
             else
             {
