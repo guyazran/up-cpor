@@ -453,6 +453,7 @@ namespace CPORLib.Algorithms
                 return false;
 
             bool bResult = false;
+            bool bCacheResult = true;
             try
             {
                 if (pssCurrent.IsGoalState())
@@ -530,10 +531,16 @@ namespace CPORLib.Algorithms
                     bResult = true;
                 return bResult;
             }
+            catch
+            {
+                bCacheResult = false;
+                throw;
+            }
             finally
             {
                 hsActiveNodes.Remove(nCurrent.ID);
-                dValidatedStates[sCacheKey] = bResult;
+                if (bCacheResult)
+                    dValidatedStates[sCacheKey] = bResult;
             }
         }
 
