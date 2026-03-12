@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# requires `conda install -c condo-forge botnet`
+# requires `conda install -c conda-forge dotnet`
 dotnet build CPORLib/CPORLibSolution.sln
 
 pip uninstall -y up-cpor
