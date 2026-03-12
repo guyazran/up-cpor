@@ -366,7 +366,7 @@ class UpCporConverter:
 
     def __convert_SDR_string_to_action_instance(self, action_string, problem) -> 'up.plans.InstantaneousAction':
         if action_string != 'None':
-            ac = action_string.split(" ")
+            ac = action_string.split()
             action_name = ac[0]
             action_param = ac[1:]
             return self.__convert_string_action_to_action_instance(action_name, action_param, problem)
@@ -391,7 +391,7 @@ class UpCporConverter:
     def __convert_SDR_string_to_observation(self, string, problem):
         if string is not None and string != 'None':
             ob = string.replace(")", "").replace("(", "")
-            obs = ob.split(" ")
+            obs = ob.split()
             if obs[0] == "not":
                 obs.remove("not")
                 boolean = False
