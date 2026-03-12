@@ -44,6 +44,15 @@ SCRIPTED_ACTIONS = {
         ("sense-door", ("p1-8", "p1-7")),
         ("sense-door", ("p1-8", "p2-8")),
     ],
+    "localize5": [
+        ("checking", ()),
+        ("sense-up", ()),
+        ("sense-down", ()),
+        ("sense-left", ()),
+        ("sense-right", ()),
+        ("move-right", ()),
+        ("checking", ()),
+    ],
     "unix1": [
         ("cd-down", ("root", "sub1")),
         ("cd-down", ("sub1", "sub11")),
@@ -66,6 +75,7 @@ CHECK_GOAL = {
     "colorballs2-2": True,
     "doors5": True,
     "doors15": True,
+    "localize5": True,
     "unix1": True,
     "wumpus05": True,
 }

@@ -28,6 +28,7 @@ SIMULATOR_CONFIG = {
     "colorballs2-2": {"max_steps": 120, "stop_on_goal": True},
     "doors5": {"max_steps": 80, "stop_on_goal": True},
     "doors15": {"max_steps": 500, "stop_on_goal": True},
+    "localize5": {"max_steps": 7, "stop_on_goal": False},
     "unix1": {"max_steps": 20, "stop_on_goal": True},
     "wumpus05": {"max_steps": 20, "stop_on_goal": True},
 }
