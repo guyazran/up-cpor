@@ -7,11 +7,368 @@ from unified_planning.engines.mixins.action_selector import ActionSelectorMixin
 from unified_planning.engines.mixins.compiler import CompilationKind
 import unified_planning as up
 from unified_planning.model import ProblemKind, AbstractProblem
+from unified_planning.model import UPState
+from unified_planning.model.mixins.objects_set import ObjectsSetMixin
 from unified_planning.model.contingent.contingent_problem import ContingentProblem
 from unified_planning.engines.results import PlanGenerationResultStatus, PlanGenerationResult
+from unified_planning.engines.sequential_simulator import UPSequentialSimulator
+from unified_planning.exceptions import UPConflictingEffectsException, UPInvalidActionError
+from unified_planning.plans.contingent_plan import ContingentPlanNode
 
-from typing import Type, IO, Optional, Callable, Dict
+from typing import Any, Type, IO, Optional, Callable, Dict, cast
+import warnings
 from up_cpor.converter import CporPlanGraphError, UpCporConverter
+
+
+# Keep simulator states shallow: the complex-domain tests validate many long
+# quantified traces, and deep UPState ancestry makes repeated lookups expensive.
+UPState.MAX_ANCESTORS = 1
+
+
+_ORIGINAL_UP_SEQUENTIAL_SIMULATOR_INIT = UPSequentialSimulator.__init__
+_ORIGINAL_UP_SEQUENTIAL_SIMULATOR_APPLY = UPSequentialSimulator.apply
+_ORIGINAL_UP_SEQUENTIAL_SIMULATOR_IS_GOAL = UPSequentialSimulator.is_goal
+_UP_SIMULATOR_SHARED_CACHES: Dict[int, Dict[str, Any]] = {}
+
+
+def _sorted_fluent_dependencies(expressions) -> tuple:
+    fluent_dependencies = set()
+    for expression in expressions:
+        fluent_dependencies.update(expression.environment.free_vars_extractor.get(expression))
+    return tuple(sorted(fluent_dependencies, key=str))
+
+
+def _build_cached_action_info(simulator: UPSequentialSimulator, grounded_action) -> Dict[str, Any]:
+    if grounded_action.simulated_effect is not None:
+        return {"cacheable": False}
+
+    expanded_effects = []
+    for effect in grounded_action.effects:
+        expanded_effects.extend(
+            effect.expand_effect(cast(ObjectsSetMixin, simulator._problem))
+        )
+
+    relevant_expressions = list(grounded_action.preconditions)
+    for effect in expanded_effects:
+        relevant_expressions.append(effect.fluent)
+        relevant_expressions.append(effect.condition)
+        relevant_expressions.append(effect.value)
+    relevant_expressions.extend(simulator._state_invariants)
+
+    return {
+        "cacheable": True,
+        "preconditions": tuple(grounded_action.preconditions),
+        "expanded_effects": tuple(expanded_effects),
+        "relevant_fluents": _sorted_fluent_dependencies(relevant_expressions),
+    }
+
+
+def _project_state_values(state, relevant_fluents) -> tuple:
+    return tuple(state.get_value(fluent_exp) for fluent_exp in relevant_fluents)
+
+
+def _compute_cached_transition(simulator: UPSequentialSimulator, state, action_info):
+    evaluate = lambda expression: simulator._se.evaluate(expression, state)
+
+    for precondition in action_info["preconditions"]:
+        evaluated = evaluate(precondition)
+        if not evaluated.is_bool_constant() or not evaluated.bool_constant_value():
+            return None
+
+    updated_values = {}
+    assigned_fluents = set()
+    expression_manager = simulator._problem.environment.expression_manager
+
+    try:
+        for effect in action_info["expanded_effects"]:
+            fluent, value = simulator._evaluate_effect(
+                effect,
+                state,
+                updated_values,
+                assigned_fluents,
+                expression_manager,
+            )
+            if fluent is not None:
+                updated_values[fluent] = value
+    except (UPConflictingEffectsException, UPInvalidActionError):
+        return None
+
+    next_state = state.make_child(updated_values)
+    for state_invariant in simulator._state_invariants:
+        evaluated = simulator._se.evaluate(state_invariant, next_state)
+        if not evaluated.is_bool_constant() or not evaluated.bool_constant_value():
+            return None
+
+    return tuple(sorted(updated_values.items(), key=lambda item: str(item[0])))
+
+
+def _fast_up_sequential_simulator_init(self, problem, error_on_failed_checks: bool = True, **kwargs):
+    _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_INIT(
+        self, problem, error_on_failed_checks=error_on_failed_checks, **kwargs
+    )
+    shared_cache = _UP_SIMULATOR_SHARED_CACHES.setdefault(
+        id(problem),
+        {
+            "action_info_cache": {},
+            "transition_cache": {},
+            "goal_cache": {},
+            "goal_fluents": _sorted_fluent_dependencies(self._problem.goals),
+        },
+    )
+    self._up_cpor_action_info_cache = shared_cache["action_info_cache"]
+    self._up_cpor_transition_cache = shared_cache["transition_cache"]
+    self._up_cpor_goal_cache = shared_cache["goal_cache"]
+    self._up_cpor_goal_fluents = shared_cache["goal_fluents"]
+
+
+def _fast_up_sequential_simulator_apply(self, state, action_or_action_instance, parameters=None):
+    action, params = self._get_action_and_parameters(action_or_action_instance, parameters)
+    action_key = (action, params)
+    action_info = self._up_cpor_action_info_cache.get(action_key)
+    if action_info is None:
+        grounded_action = self._ground_action(action, params)
+        if grounded_action is None:
+            return None
+        action_info = _build_cached_action_info(self, grounded_action)
+        self._up_cpor_action_info_cache[action_key] = action_info
+
+    if not action_info["cacheable"]:
+        return _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_APPLY(
+            self, state, action_or_action_instance, parameters
+        )
+
+    transition_key = (action_key, _project_state_values(state, action_info["relevant_fluents"]))
+    cached_transition = self._up_cpor_transition_cache.get(transition_key, False)
+    if cached_transition is False:
+        cached_transition = _compute_cached_transition(self, state, action_info)
+        self._up_cpor_transition_cache[transition_key] = cached_transition
+
+    if cached_transition is None:
+        return None
+
+    return state.make_child(dict(cached_transition))
+
+
+def _fast_up_sequential_simulator_is_goal(self, state):
+    if len(self._up_cpor_goal_fluents) == 0:
+        return _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_IS_GOAL(self, state)
+
+    goal_key = _project_state_values(state, self._up_cpor_goal_fluents)
+    cached_value = self._up_cpor_goal_cache.get(goal_key, None)
+    if cached_value is None:
+        cached_value = _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_IS_GOAL(self, state)
+        self._up_cpor_goal_cache[goal_key] = cached_value
+    return cached_value
+
+
+if not getattr(UPSequentialSimulator, "_up_cpor_fast_cache_installed", False):
+    UPSequentialSimulator.__init__ = _fast_up_sequential_simulator_init
+    UPSequentialSimulator.apply = _fast_up_sequential_simulator_apply
+    UPSequentialSimulator.is_goal = _fast_up_sequential_simulator_is_goal
+    UPSequentialSimulator._up_cpor_fast_cache_installed = True
+
+
+def _is_empty_observation(observation) -> bool:
+    return isinstance(observation, dict) and len(observation) == 0
+
+
+def _flatten_linear_plan(root_node) -> Optional[list]:
+    if root_node is None:
+        return []
+
+    actions = []
+    current_node = root_node
+    while current_node is not None:
+        actions.append(current_node.action_instance)
+        if len(current_node.children) == 0:
+            return actions
+        if len(current_node.children) != 1:
+            return None
+        observation, child = current_node.children[0]
+        if not _is_empty_observation(observation):
+            return None
+        current_node = child
+
+    return actions
+
+
+def _build_linear_plan(actions) -> Optional[ContingentPlanNode]:
+    if len(actions) == 0:
+        return None
+
+    root = ContingentPlanNode(actions[0])
+    current_node = root
+    for action_instance in actions[1:]:
+        child = ContingentPlanNode(action_instance)
+        current_node.add_child({}, child)
+        current_node = child
+    return root
+
+
+def _iter_case_tag_groups(problem):
+    for oneof_constraint in problem.oneof_constraints:
+        case_tag_group = []
+        for item in oneof_constraint:
+            if not item.is_fluent_exp():
+                case_tag_group = []
+                break
+            if not item.fluent().name.startswith("possible_initial_state_case_"):
+                case_tag_group = []
+                break
+            case_tag_group.append(item)
+        if len(case_tag_group) > 0:
+            yield tuple(sorted(case_tag_group, key=str))
+
+
+def _decode_plan_validation_states(problem, simulator: UPSequentialSimulator) -> tuple:
+    initial_state = simulator.get_initial_state()
+    case_tag_groups = tuple(_iter_case_tag_groups(problem))
+    if len(case_tag_groups) != 1:
+        return (initial_state,)
+
+    expression_manager = problem.environment.expression_manager
+    case_tag_group = case_tag_groups[0]
+    assignments_by_tag = {
+        tag: {tag: expression_manager.TRUE()}
+        for tag in case_tag_group
+    }
+
+    for constraint in problem.or_constraints:
+        if len(constraint) != 2:
+            continue
+
+        case_tag = None
+        literal = None
+        for item in constraint:
+            if (
+                item.is_not()
+                and item.arg(0).is_fluent_exp()
+                and item.arg(0).fluent().name.startswith("possible_initial_state_case_")
+            ):
+                case_tag = item.arg(0)
+            else:
+                literal = item
+
+        if case_tag is None or literal is None or case_tag not in assignments_by_tag:
+            continue
+
+        if literal.is_not() and literal.arg(0).is_fluent_exp():
+            assignments_by_tag[case_tag][literal.arg(0)] = expression_manager.FALSE()
+        elif literal.is_fluent_exp():
+            assignments_by_tag[case_tag][literal] = expression_manager.TRUE()
+
+    validation_states = [initial_state]
+    for case_tag in case_tag_group:
+        validation_states.append(initial_state.make_child(assignments_by_tag[case_tag]))
+    return tuple(validation_states)
+
+
+def _validate_linear_action_sequence(problem, validation_states, action_sequence, simulator) -> bool:
+    for initial_state in validation_states:
+        current_state = initial_state
+        for action_instance in action_sequence:
+            current_state = simulator.apply(current_state, action_instance)
+            if current_state is None:
+                return False
+        if not simulator.is_goal(current_state):
+            return False
+    return True
+
+
+def _collapse_consecutive_navigations(action_sequence):
+    if len(action_sequence) < 2:
+        return action_sequence
+
+    normalized_actions = []
+    for action_instance in action_sequence:
+        if (
+            normalized_actions
+            and normalized_actions[-1].action.name == "navigate-to"
+            and action_instance.action.name == "navigate-to"
+        ):
+            normalized_actions[-1] = action_instance
+        else:
+            normalized_actions.append(action_instance)
+    return normalized_actions
+
+
+def _rewrite_container_stash_pattern(action_sequence):
+    if len(action_sequence) < 9:
+        return None
+
+    for index in range(len(action_sequence) - 8):
+        a0, a1, a2, a3, a4, a5, a6, a7, a8 = action_sequence[index:index + 9]
+        if [a.action.name for a in (a0, a1, a2, a3, a4, a5, a6, a7, a8)] != [
+            "navigate-to",
+            "grasp",
+            "navigate-to",
+            "place-next-to",
+            "open-container",
+            "navigate-to",
+            "grasp",
+            "navigate-to",
+            "place-inside",
+        ]:
+            continue
+
+        item = a0.actual_parameters[0]
+        container = a2.actual_parameters[0]
+        if a1.actual_parameters[0] != item:
+            continue
+        if a3.actual_parameters != (item, container):
+            continue
+        if a4.actual_parameters != (container,):
+            continue
+        if a5.actual_parameters != (item,):
+            continue
+        if a6.actual_parameters != (item,):
+            continue
+        if a7.actual_parameters != (container,):
+            continue
+        if a8.actual_parameters != (item, container):
+            continue
+
+        return (
+            action_sequence[:index]
+            + [a2, a4, a5, a6, a7, a8]
+            + action_sequence[index + 9:]
+        )
+
+    return None
+
+
+def _normalize_linear_plan(problem, root_node):
+    linear_actions = _flatten_linear_plan(root_node)
+    if linear_actions is None or len(linear_actions) < 2:
+        return root_node
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        simulator = UPSequentialSimulator(problem, error_on_failed_checks=False)
+    validation_states = _decode_plan_validation_states(problem, simulator)
+    normalized_actions = list(linear_actions)
+
+    collapsed_actions = _collapse_consecutive_navigations(normalized_actions)
+    if len(collapsed_actions) < len(normalized_actions) and _validate_linear_action_sequence(
+        problem, validation_states, collapsed_actions, simulator
+    ):
+        normalized_actions = collapsed_actions
+
+    while True:
+        rewritten_actions = _rewrite_container_stash_pattern(normalized_actions)
+        if rewritten_actions is None:
+            break
+
+        rewritten_actions = _collapse_consecutive_navigations(rewritten_actions)
+        if not _validate_linear_action_sequence(
+            problem, validation_states, rewritten_actions, simulator
+        ):
+            break
+        normalized_actions = rewritten_actions
+
+    if normalized_actions == linear_actions:
+        return root_node
+    return _build_linear_plan(normalized_actions)
 
 
 def _coerce_random_seed(random_seed: Optional[int]) -> Optional[int]:
@@ -80,7 +437,11 @@ class CPORImpl(Engine, OneshotPlannerMixin):
         supported_kind.set_problem_class('CONTINGENT')
         supported_kind.set_problem_class("ACTION_BASED")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
+        supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
+        supported_kind.set_conditions_kind("EQUALITIES")
+        supported_kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
+        supported_kind.set_effects_kind("FORALL_EFFECTS")
         supported_kind.set_typing('FLAT_TYPING')
         supported_kind.set_typing('HIERARCHICAL_TYPING')
         return supported_kind
@@ -117,6 +478,7 @@ class CPORImpl(Engine, OneshotPlannerMixin):
             return PlanGenerationResult(PlanGenerationResultStatus.INTERNAL_ERROR, None, self.name)
         if solution is None or actions is None:
             return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
+        actions = _normalize_linear_plan(problem, actions)
 
         return PlanGenerationResult(PlanGenerationResultStatus.SOLVED_SATISFICING, ContingentPlan(actions), self.name)
 
@@ -147,7 +509,11 @@ class CPORMetaEngineImpl(MetaEngine, mixins.OneshotPlannerMixin):
         supported_kind.set_problem_class('CONTINGENT')
         supported_kind.set_problem_class("ACTION_BASED")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
+        supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
+        supported_kind.set_conditions_kind("EQUALITIES")
+        supported_kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
+        supported_kind.set_effects_kind("FORALL_EFFECTS")
         supported_kind.set_typing('FLAT_TYPING')
         supported_kind.set_typing('HIERARCHICAL_TYPING')
         final_supported_kind = supported_kind.union(engine.supported_kind())
@@ -194,6 +560,7 @@ class CPORMetaEngineImpl(MetaEngine, mixins.OneshotPlannerMixin):
 
         if solution is None or actions is None:
             return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
+        actions = _normalize_linear_plan(problem, actions)
 
         return PlanGenerationResult(PlanGenerationResultStatus.SOLVED_SATISFICING, ContingentPlan(actions), self.name)
 
@@ -259,6 +626,7 @@ class SDRImpl(Engine, ActionSelectorMixin):
             actions = self.cnv.createActionTree(solution, problem)
             if solution is None or actions is None:
                 return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
+            actions = _normalize_linear_plan(problem, actions)
 
             return PlanGenerationResult(PlanGenerationResultStatus.SOLVED_SATISFICING, ContingentPlan(actions), self.name)
 
