@@ -1443,13 +1443,14 @@ namespace CPORLib.PlanningModel
             {
                 bAllTrue = false;//choosing true first is better in some domains
                 bAllFalse = false;//but not in others...
-                return lUnknown.First();//the order of the variables is already randomized - might as well return the first one. This is important because oneofs appear first.
+                return ChoosePreferredPredicate(lUnknown);
                 //return lUnknown[RandomGenerator.Next(lUnknown.Count)]; the order of the variables is already randomized - miFF.Search.gHt as well return the first one. This is important because oneofs appear first.
             }
-            List<Predicate>[] alPredicates = new List<Predicate>[3];
-            alPredicates[0] = new List<Predicate>();
-            alPredicates[1] = new List<Predicate>();
-            alPredicates[2] = new List<Predicate>();
+            List<Predicate>[] alPredicates = new List<Predicate>[6];
+            for (int i = 0; i < alPredicates.Length; i++)
+            {
+                alPredicates[i] = new List<Predicate>();
+            }
             foreach (Predicate p in lUnknown)
             {
                 bAllTrue = true;
@@ -1463,12 +1464,13 @@ namespace CPORLib.PlanningModel
                     if (!bAllTrue && !bAllFalse)
                         break;
                 }
+                bool bSynthetic = IsSyntheticCasePredicate(p);
                 if (bAllTrue)
-                    alPredicates[0].Add(p);
+                    alPredicates[bSynthetic ? 3 : 0].Add(p);
                 if (bAllFalse)
-                    alPredicates[1].Add(p);
+                    alPredicates[bSynthetic ? 4 : 1].Add(p);
                 if (!bAllFalse && !bAllTrue)
-                    alPredicates[2].Add(p);
+                    alPredicates[bSynthetic ? 5 : 2].Add(p);
                 // if (bAllFalse || bAllTrue)
                 //    return p;
             }
@@ -1476,24 +1478,68 @@ namespace CPORLib.PlanningModel
             {
                 bAllTrue = true;
                 bAllFalse = false;
-                return alPredicates[0][0];//the order of the variables is already randomized - miFF.Search.gHt as well return the first one. This is important because oneofs appear first.
+                return ChoosePreferredPredicate(alPredicates[0]);
                 //return alPredicates[0][RandomGenerator.Next(alPredicates[0].Count)];
             }
             if (alPredicates[1].Count > 0)
             {
                 bAllTrue = false;
                 bAllFalse = true;
-                return alPredicates[1][0];//the order of the variables is already randomized - miFF.Search.gHt as well return the first one. This is important because oneofs appear first.
+                return ChoosePreferredPredicate(alPredicates[1]);
                 //return alPredicates[1][RandomGenerator.Next(alPredicates[1].Count)];
             }
             if (alPredicates[2].Count > 0)
             {
                 bAllTrue = false;
                 bAllFalse = false;
-                return alPredicates[2][0];//the order of the variables is already randomized - miFF.Search.gHt as well return the first one. This is important because oneofs appear first.
+                return ChoosePreferredPredicate(alPredicates[2]);
                 //return alPredicates[2][RandomGenerator.Next(alPredicates[2].Count)];
             }
-            return lUnknown.First();
+            if (alPredicates[3].Count > 0)
+            {
+                bAllTrue = true;
+                bAllFalse = false;
+                return ChoosePreferredPredicate(alPredicates[3]);
+            }
+            if (alPredicates[4].Count > 0)
+            {
+                bAllTrue = false;
+                bAllFalse = true;
+                return ChoosePreferredPredicate(alPredicates[4]);
+            }
+            if (alPredicates[5].Count > 0)
+            {
+                bAllTrue = false;
+                bAllFalse = false;
+                return ChoosePreferredPredicate(alPredicates[5]);
+            }
+            return ChoosePreferredPredicate(lUnknown);
+        }
+
+        private Predicate ChoosePreferredPredicate(IEnumerable<Predicate> lCandidates)
+        {
+            Predicate pBest = null;
+            foreach (Predicate pCandidate in lCandidates)
+            {
+                if (pBest == null)
+                {
+                    pBest = pCandidate;
+                    continue;
+                }
+
+                bool bBestSynthetic = IsSyntheticCasePredicate(pBest);
+                bool bCandidateSynthetic = IsSyntheticCasePredicate(pCandidate);
+                if (bBestSynthetic != bCandidateSynthetic)
+                {
+                    if (!bCandidateSynthetic)
+                        pBest = pCandidate;
+                    continue;
+                }
+
+                if (string.CompareOrdinal(pCandidate.ToString(), pBest.ToString()) < 0)
+                    pBest = pCandidate;
+            }
+            return pBest;
         }
         private ISet<Predicate> SimpleChooseHiddenPredicates(List<Formula> lHidden, HashSet<Predicate> lAssignment, ISet<Predicate> lUnknown, List<ISet<Predicate>> lCurrentAssignments, bool random)
         {
@@ -2161,7 +2207,8 @@ namespace CPORLib.PlanningModel
 
         private List<ISet<Predicate>> ChooseStateSet()
         {
-            if (Options.Translation == Options.Translations.BestCase || (Unknown.Count == 0 && !Problem.Domain.ContainsNonDeterministicActions))
+            if (Options.Translation == Options.Translations.BestCase ||
+                (!HasHiddenUncertainty() && !Problem.Domain.ContainsNonDeterministicActions))
             {
                 List<ISet<Predicate>> lState = new List<ISet<Predicate>>();
                 lState.Add(new HashSet<Predicate>(m_lObserved));
@@ -2169,6 +2216,160 @@ namespace CPORLib.PlanningModel
             }
 
             return ReviseExistingTags(Options.TagsCount);
+        }
+
+        private bool HasHiddenUncertainty()
+        {
+            foreach (CompoundFormula cf in m_lHiddenFormulas)
+            {
+                if (cf != null)
+                    return true;
+            }
+            return false;
+        }
+
+        private void PreferUnsatisfiedGoalState(List<ISet<Predicate>> lStates)
+        {
+            if (lStates == null || lStates.Count == 0 || Problem.Goal == null)
+                return;
+            if (!Problem.Goal.IsTrue(lStates[0]))
+                return;
+
+            for (int i = 1; i < lStates.Count; i++)
+            {
+                if (!Problem.Goal.IsTrue(lStates[i]))
+                {
+                    ISet<Predicate> lChosen = lStates[0];
+                    lStates[0] = lStates[i];
+                    lStates[i] = lChosen;
+                    return;
+                }
+            }
+
+            ISet<Predicate> lGoalRefutingState = ChooseGoalRefutingState();
+            if (lGoalRefutingState != null)
+            {
+                lStates[0] = lGoalRefutingState;
+            }
+        }
+
+        private void PreferMeaningfulDisagreement(List<ISet<Predicate>> lStates)
+        {
+            if (lStates == null || lStates.Count < 2)
+                return;
+            if (HasMeaningfulDisagreement(lStates))
+                return;
+
+            ISet<Predicate> lAlternativeState = ChooseStateWithMeaningfulDisagreement(lStates);
+            if (lAlternativeState != null)
+            {
+                lStates[0] = lAlternativeState;
+            }
+        }
+
+        private ISet<Predicate> ChooseGoalRefutingState()
+        {
+            if (Problem.Goal == null || Problem.Goal.IsTrue(Observed))
+                return null;
+
+            foreach (Predicate pGoal in Problem.Goal.GetAllPredicates())
+            {
+                Predicate pRefuting = pGoal.Negate();
+                if (Observed.Contains(pGoal))
+                    continue;
+
+                ISet<Predicate> lState = ChooseStateWithForcedPredicate(pRefuting);
+                if (lState != null && !Problem.Goal.IsTrue(lState))
+                    return lState;
+            }
+
+            return null;
+        }
+
+        private ISet<Predicate> ChooseStateWithForcedPredicate(Predicate pForced)
+        {
+            List<CompoundFormula> lHidden = new List<CompoundFormula>(m_lHiddenFormulas);
+            ISet<Predicate> lToAssign = GetHiddenPredicates(lHidden);
+            Predicate pCanonical = pForced.Canonical();
+            if (!lToAssign.Contains(pCanonical))
+                return null;
+
+            HashSet<Predicate> lInitialAssignment = new HashSet<Predicate>();
+            lInitialAssignment.Add(pForced);
+            lToAssign.Remove(pCanonical);
+            return ChooseHiddenPredicates(lHidden, lInitialAssignment, lToAssign, false);
+        }
+
+        private bool HasMeaningfulDisagreement(List<ISet<Predicate>> lStates)
+        {
+            List<Predicate> lCandidates = GetMeaningfulHiddenPredicates();
+            foreach (Predicate pCandidate in lCandidates)
+            {
+                bool bAllPositive = true;
+                bool bAllNegative = true;
+                Predicate pNegated = pCandidate.Negate();
+                foreach (ISet<Predicate> lState in lStates)
+                {
+                    if (!Contains(lState, pCandidate))
+                        bAllPositive = false;
+                    if (!Contains(lState, pNegated))
+                        bAllNegative = false;
+                }
+                if (!bAllPositive && !bAllNegative)
+                    return true;
+            }
+            return false;
+        }
+
+        private ISet<Predicate> ChooseStateWithMeaningfulDisagreement(List<ISet<Predicate>> lStates)
+        {
+            List<Predicate> lCandidates = GetMeaningfulHiddenPredicates();
+            foreach (Predicate pCandidate in lCandidates)
+            {
+                bool bAllPositive = true;
+                bool bAllNegative = true;
+                Predicate pNegated = pCandidate.Negate();
+                foreach (ISet<Predicate> lState in lStates)
+                {
+                    if (!Contains(lState, pCandidate))
+                        bAllPositive = false;
+                    if (!Contains(lState, pNegated))
+                        bAllNegative = false;
+                }
+
+                Predicate pForced = null;
+                if (bAllPositive)
+                    pForced = pNegated;
+                else if (bAllNegative)
+                    pForced = pCandidate;
+
+                if (pForced != null)
+                {
+                    ISet<Predicate> lAlternativeState = ChooseStateWithForcedPredicate(pForced);
+                    if (lAlternativeState != null && !Contains(lStates, lAlternativeState))
+                        return lAlternativeState;
+                }
+            }
+            return null;
+        }
+
+        private List<Predicate> GetMeaningfulHiddenPredicates()
+        {
+            List<CompoundFormula> lHidden = new List<CompoundFormula>(m_lHiddenFormulas);
+            ISet<Predicate> lHiddenPredicates = GetHiddenPredicates(lHidden);
+            List<Predicate> lCandidates = new List<Predicate>();
+            foreach (Predicate pHidden in lHiddenPredicates)
+            {
+                if (!IsSyntheticCasePredicate(pHidden))
+                    lCandidates.Add(pHidden);
+            }
+            lCandidates.Sort((pFirst, pSecond) => string.CompareOrdinal(pFirst.ToString(), pSecond.ToString()));
+            return lCandidates;
+        }
+
+        private bool IsSyntheticCasePredicate(Predicate p)
+        {
+            return p.Name.StartsWith("possible_initial_state_case_", StringComparison.Ordinal);
         }
 
         private List<ISet<Predicate>> ChooseDeadEndState(List<Formula> lMaybeDeadends, DeadendStrategies dsStrategy, bool bPreconditionFailure)
@@ -2316,8 +2517,8 @@ namespace CPORLib.PlanningModel
                 }
             }
 
-
-
+            PreferUnsatisfiedGoalState(m_lCurrentTags);
+            PreferMeaningfulDisagreement(m_lCurrentTags);
             return m_lCurrentTags;
         }
 
@@ -3296,6 +3497,11 @@ namespace CPORLib.PlanningModel
             {
                 m_lProblematicTag = m_lCurrentTags[0];
             }
+        }
+
+        public void ClearProblematicTag()
+        {
+            m_lProblematicTag = null;
         }
 
     }

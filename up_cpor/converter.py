@@ -28,7 +28,8 @@ from unified_planning.plans.contingent_plan import ContingentPlanNode
 import unified_planning as up
 from unified_planning.shortcuts import Bool
 
-from typing import Dict, Optional, Set
+from itertools import product
+from typing import Dict, Iterable, Optional, Set, Tuple
 
 
 class CporPlanGraphError(RuntimeError):
@@ -41,23 +42,38 @@ class UpCporConverter:
 
     def createProblem(self, problem, domain):
         p = Problem(problem.name, domain)
+        em = problem.environment.expression_manager
 
         for f, v in problem.initial_values.items():
+            if self.__is_hidden_initial_fluent(problem, f):
+                continue
+
+            gp = self.__CreatePredicate(f, False, None)
             if v.is_true():
-                gp = self.__CreatePredicate(f, False, None)
+                p.AddKnown(gp)
+            elif v.is_false():
+                gp.Negation = True
                 p.AddKnown(gp)
 
-        for c in problem.or_constraints:
-            cf = self.__CreateOrFormula(c, [])
-            p.AddHidden(cf)
+        compact_hidden_constraints = self.__create_compact_case_hidden_constraints(problem)
+        if compact_hidden_constraints is not None:
+            for constraint in compact_hidden_constraints:
+                cf = self.__CreateFormula(constraint, [], problem)
+                p.AddHidden(cf)
+        else:
+            inferred_case_constraints = self.__infer_missing_case_hidden_literals(problem)
 
-        for c in problem.oneof_constraints:
-            cf = self.__CreateOneOfFormula(c, [])
-            p.AddHidden(cf)
+            for c in tuple(problem.or_constraints) + inferred_case_constraints:
+                cf = self.__CreateOrFormula(c, [], problem)
+                p.AddHidden(cf)
+
+            for c in problem.oneof_constraints:
+                cf = self.__CreateOneOfFormula(c, [], problem)
+                p.AddHidden(cf)
 
         goal = CompoundFormula("and")
         for g in problem.goals:
-            cp = self.__CreateFormula(g, [])
+            cp = self.__CreateFormula(g, [], problem)
             goal.AddOperand(cp)
         p.Goal = goal.Simplify()
 
@@ -153,30 +169,40 @@ class UpCporConverter:
             d.AddConstant(o.name, o.type.name)
 
         for f in problem.fluents:
+            if not self.__fluent_has_groundings(problem, f):
+                continue
             pp = self.__CreatePredicate(f, True, [])
             d.AddPredicate(pp)
 
         for a in problem.actions:
+            if not self.__action_has_groundings(problem, a):
+                continue
             l = []
             pa = ParametrizedAction(a.name)
             for param in a.parameters:
                 l.append(param.name)
-                pa.AddParameter(param.name, param.type.name)
+                pa.AddParameter(self.__normalize_parameter_name(param.name), param.type.name)
+            translated_preconditions = []
             if not a.preconditions is None:
-                for pre in a.preconditions:
-                    formula = self.__CreateFormula(pre, l)
-                    pa.Preconditions = formula
+                translated_preconditions.extend(
+                    self.__CreateFormula(pre, l, problem) for pre in a.preconditions
+                )
+            translated_preconditions.extend(
+                self.__CreatePromotedPreconditions(a, l, problem)
+            )
+            if translated_preconditions:
+                pa.Preconditions = self.__combine_formulas("and", translated_preconditions)
             if not a.effects is None and len(a.effects) > 0:
                 cp = CompoundFormula("and")
                 for eff in a.effects:
-                    f_eff = self.__CreateEffectFormula(eff, l)
+                    f_eff = self.__CreateEffectFormula(eff, l, problem)
                     cp.SimpleAddOperand(f_eff)
                 if len(cp.Operands) > 0:
                     pa.SetEffects(cp)
             if type(a) is SensingAction:
                 if not a.observed_fluents is None:
                     for o in a.observed_fluents:
-                        pf = self.__CreateFormula(o, l)
+                        pf = self.__CreateFormula(o, l, problem)
                         pa.Observe = pf
 
             d.AddAction(pa)
@@ -224,14 +250,14 @@ class UpCporConverter:
                     solution.FalseObservationChild, problem, converted_nodes, active_node_ids
                 )
                 if child is not None:
-                    observation = {obser: problem.environment.expression_manager.TRUE()}
+                    observation = {obser: problem.environment.expression_manager.FALSE()}
                     root.add_child(observation, child)
             if solution.TrueObservationChild and obser:
                 child = self.__create_action_tree(
                     solution.TrueObservationChild, problem, converted_nodes, active_node_ids
                 )
                 if child is not None:
-                    observation = {obser: problem.environment.expression_manager.FALSE()}
+                    observation = {obser: problem.environment.expression_manager.TRUE()}
                     root.add_child(observation, child)
         finally:
             active_node_ids.remove(node_id)
@@ -251,7 +277,7 @@ class UpCporConverter:
             for param in f.signature:
                 bParam = bAllParameters or (param.name in lActionParameters)
                 if bParam:
-                    pp.AddParameter(param.name, param.type.name)
+                    pp.AddParameter(self.__normalize_parameter_name(param.name), param.type.name)
                 else:
                     pp.AddConstant(param.name, param.type.name)
             return pp
@@ -263,30 +289,77 @@ class UpCporConverter:
                 raise ValueError(f"Unsupported effect value: {f.value!r}")
             return pp
         if type(f) is FNode:
-            if (not bAllParameters) and (lActionParameters is None or len(lActionParameters) == 0):
-                pp = GroundedPredicate(f.fluent().name)
+            if f.node_type == OperatorKind.FLUENT_EXP:
+                predicate_name = f.fluent().name
+                predicate_args = f.args
+            elif f.node_type == OperatorKind.EQUALS:
+                predicate_name = "="
+                predicate_args = f.args
             else:
-                pp = ParametrizedPredicate(f.fluent().name)
-            for arg in f.args:
+                raise NotImplementedError(f"Unsupported predicate node type: {f.node_type}")
+
+            is_grounded = (
+                (not bAllParameters)
+                and (lActionParameters is None or len(lActionParameters) == 0)
+                and all(arg.is_object_exp() for arg in predicate_args)
+            )
+            if is_grounded:
+                pp = GroundedPredicate(predicate_name)
+            else:
+                pp = ParametrizedPredicate(predicate_name)
+            for arg in predicate_args:
                 if arg.is_parameter_exp():
                     param = arg.parameter()
-                    pp.AddParameter(param.name, param.type.name)
-                if arg.is_object_exp():
+                    pp.AddParameter(self.__normalize_parameter_name(param.name), param.type.name)
+                elif arg.is_object_exp():
                     obj = arg.object()
                     pp.AddConstant(obj.name, obj.type.name)
+                elif arg.is_variable_exp():
+                    variable = arg.variable()
+                    pp.AddParameter(self.__normalize_parameter_name(variable.name), variable.type.name)
+                else:
+                    raise ValueError(f"Unsupported predicate argument: {arg!r}")
             return pp
 
-    def __CreateEffectFormula(self, effect: Effect, lActionParameters) -> Optional[Formula]:
+    def __CreateEffectFormula(self, effect: Effect, lActionParameters, problem) -> Optional[Formula]:
         if not effect.is_assignment():
             raise NotImplementedError(f"Unsupported effect kind: {effect!r}")
+
         if effect.is_forall():
-            raise NotImplementedError(f"Universal conditional effects are not supported: {effect!r}")
+            return self.__CreateQuantifiedEffectFormula(
+                effect,
+                lActionParameters,
+                problem,
+                tuple(effect.forall),
+                {},
+            )
 
-        effect_formula = PredicateFormula(self.__CreatePredicate(effect, False, lActionParameters))
-        if not effect.is_conditional():
-            return effect_formula
+        return self.__CreateEffectFormulaFromNodes(
+            effect.fluent,
+            effect.value,
+            effect.condition,
+            lActionParameters,
+            problem,
+        )
 
-        condition_formula = self.__CreateFormula(effect.condition, lActionParameters)
+    def __CreateEffectFormulaFromNodes(
+        self,
+        fluent_exp: FNode,
+        value_exp: FNode,
+        condition_exp: FNode,
+        lActionParameters,
+        problem,
+    ) -> Optional[Formula]:
+        if value_exp.is_false():
+            effect_predicate = self.__CreatePredicate(fluent_exp, False, lActionParameters)
+            effect_predicate.Negation = True
+        elif value_exp.is_true():
+            effect_predicate = self.__CreatePredicate(fluent_exp, False, lActionParameters)
+        else:
+            raise ValueError(f"Unsupported effect value: {value_exp!r}")
+
+        effect_formula = PredicateFormula(effect_predicate)
+        condition_formula = self.__CreateFormula(condition_exp, lActionParameters, problem)
         if self.__is_true_formula(condition_formula):
             return effect_formula
         if self.__is_false_formula(condition_formula):
@@ -297,29 +370,219 @@ class UpCporConverter:
         when_formula.AddOperand(effect_formula)
         return when_formula
 
-    def __CreateFormula(self, n: FNode, lActionParameters) -> Formula:
+    def __CreateQuantifiedEffectFormula(
+        self,
+        effect: Effect,
+        lActionParameters,
+        problem,
+        quantified_variables,
+        substitutions,
+    ) -> Optional[Formula]:
+        if len(quantified_variables) == 0:
+            fluent_exp = self.__substitute_expression(effect.fluent, substitutions)
+            value_exp = self.__substitute_expression(effect.value, substitutions)
+            condition_exp = self.__substitute_expression(effect.condition, substitutions)
+            return self.__CreateEffectFormulaFromNodes(
+                fluent_exp,
+                value_exp,
+                condition_exp,
+                lActionParameters,
+                problem,
+            )
+
+        quantified_variable = quantified_variables[0]
+        em = problem.environment.expression_manager
+        expanded_effects = []
+        for obj in self.__iter_objects_for_type(problem, quantified_variable.type):
+            next_substitutions = dict(substitutions)
+            next_substitutions[quantified_variable] = em.ObjectExp(obj)
+            expanded_effect = self.__CreateQuantifiedEffectFormula(
+                effect,
+                lActionParameters,
+                problem,
+                quantified_variables[1:],
+                next_substitutions,
+            )
+            if expanded_effect is not None:
+                expanded_effects.append(expanded_effect)
+
+        return self.__combine_formulas("and", expanded_effects, empty_value=None)
+
+    def __CreatePromotedPreconditions(self, action, lActionParameters, problem) -> Iterable[Formula]:
+        if not action.effects:
+            return ()
+        if any(not effect.is_assignment() for effect in action.effects):
+            return ()
+        if any(not effect.is_conditional() for effect in action.effects):
+            return ()
+
+        common_conditions = None
+        for effect in action.effects:
+            current_conditions = {}
+            for condition in self.__iter_conjuncts(effect.condition):
+                if condition.is_true() or self.__contains_variable_expression(condition):
+                    continue
+                current_conditions[str(condition)] = condition
+
+            if common_conditions is None:
+                common_conditions = current_conditions
+            else:
+                common_conditions = {
+                    key: common_conditions[key]
+                    for key in common_conditions.keys() & current_conditions.keys()
+                }
+
+            if not common_conditions:
+                return ()
+
+        existing_conditions = set()
+        for precondition in action.preconditions:
+            for condition in self.__iter_conjuncts(precondition):
+                existing_conditions.add(str(condition))
+
+        promoted_conditions = []
+        for key in sorted(common_conditions.keys()):
+            if key in existing_conditions:
+                continue
+            promoted_conditions.append(
+                self.__CreateFormula(common_conditions[key], lActionParameters, problem)
+            )
+        return tuple(promoted_conditions)
+
+    def __CreateFormula(self, n: FNode, lActionParameters, problem) -> Formula:
         if n.node_type == OperatorKind.BOOL_CONSTANT:
             predicate = Utilities.TRUE_PREDICATE if n.is_true() else Utilities.FALSE_PREDICATE
             return PredicateFormula(predicate)
-        if n.node_type == OperatorKind.FLUENT_EXP:
+        if n.node_type == OperatorKind.FLUENT_EXP or n.node_type == OperatorKind.EQUALS:
             pp = self.__CreatePredicate(n, False, lActionParameters)
             pf = PredicateFormula(pp)
             return pf
+        if n.node_type == OperatorKind.FORALL or n.node_type == OperatorKind.EXISTS:
+            quantified_operator = "and" if n.node_type == OperatorKind.FORALL else "or"
+            return self.__CreateQuantifiedFormula(
+                n.arg(0),
+                tuple(n.variables()),
+                quantified_operator,
+                lActionParameters,
+                problem,
+                {},
+            )
         if n.node_type == OperatorKind.AND:
-            cp = CompoundFormula("and")
+            compound_operator = "and"
         elif n.node_type == OperatorKind.OR:
-            cp = CompoundFormula("or")
+            compound_operator = "or"
         elif n.node_type == OperatorKind.NOT:
-            cp = self.__CreateFormula(n.args[0], lActionParameters)
+            cp = self.__CreateFormula(n.args[0], lActionParameters, problem)
             cp = cp.Negate()
             return cp
         else:
             raise NotImplementedError(f"Unsupported formula node type: {n.node_type}")
 
-        for nSub in n.args:
-            fSub = self.__CreateFormula(nSub, lActionParameters)
-            cp.SimpleAddOperand(fSub)
-        return cp
+        return self.__combine_formulas(
+            compound_operator,
+            (self.__CreateFormula(nSub, lActionParameters, problem) for nSub in n.args),
+        )
+
+    def __CreateQuantifiedFormula(
+        self,
+        body: FNode,
+        quantified_variables,
+        operator: str,
+        lActionParameters,
+        problem,
+        substitutions,
+    ) -> Formula:
+        if len(quantified_variables) == 0:
+            substituted_body = self.__substitute_expression(body, substitutions)
+            return self.__CreateFormula(substituted_body, lActionParameters, problem)
+
+        quantified_variable = quantified_variables[0]
+        em = problem.environment.expression_manager
+        expanded_formulas = []
+        for obj in self.__iter_objects_for_type(problem, quantified_variable.type):
+            next_substitutions = dict(substitutions)
+            next_substitutions[quantified_variable] = em.ObjectExp(obj)
+            expanded_formulas.append(
+                self.__CreateQuantifiedFormula(
+                    body,
+                    quantified_variables[1:],
+                    operator,
+                    lActionParameters,
+                    problem,
+                    next_substitutions,
+                )
+            )
+        return self.__combine_formulas(operator, expanded_formulas)
+
+    def __substitute_expression(self, expression: FNode, substitutions):
+        if len(substitutions) == 0:
+            return expression
+        return expression.substitute(substitutions)
+
+    def __iter_objects_for_type(self, problem, up_type) -> Iterable:
+        for obj in sorted(problem.all_objects, key=lambda current_object: current_object.name):
+            if self.__object_matches_type(obj, up_type):
+                yield obj
+
+    def __type_has_objects(self, problem, up_type) -> bool:
+        return any(self.__iter_objects_for_type(problem, up_type))
+
+    def __fluent_has_groundings(self, problem, fluent: Fluent) -> bool:
+        return all(self.__type_has_objects(problem, parameter.type) for parameter in fluent.signature)
+
+    def __action_has_groundings(self, problem, action) -> bool:
+        return all(self.__type_has_objects(problem, parameter.type) for parameter in action.parameters)
+
+    def __object_matches_type(self, obj, up_type) -> bool:
+        current_type = obj.type
+        while current_type is not None:
+            if current_type == up_type:
+                return True
+            current_type = getattr(current_type, "father", None)
+        return False
+
+    def __combine_formulas(
+        self,
+        operator: str,
+        formulas,
+        *,
+        empty_value: Optional[Formula] = None,
+    ) -> Optional[Formula]:
+        normalized_formulas = [formula for formula in formulas if formula is not None]
+        if len(normalized_formulas) == 0:
+            if empty_value is not None:
+                return empty_value
+            predicate = Utilities.TRUE_PREDICATE if operator == "and" else Utilities.FALSE_PREDICATE
+            return PredicateFormula(predicate)
+        if len(normalized_formulas) == 1:
+            return normalized_formulas[0]
+
+        compound_formula = CompoundFormula(operator)
+        for formula in normalized_formulas:
+            compound_formula.SimpleAddOperand(formula)
+        return compound_formula
+
+    def __normalize_parameter_name(self, name: str) -> str:
+        return name if name.startswith("?") else f"?{name}"
+
+    def __is_hidden_initial_fluent(self, problem, fluent_exp: FNode) -> bool:
+        hidden_fluents = getattr(problem, "hidden_fluents", None)
+        if hidden_fluents is None:
+            return False
+        em = problem.environment.expression_manager
+        return fluent_exp in hidden_fluents or em.Not(fluent_exp) in hidden_fluents
+
+    def __iter_conjuncts(self, formula: FNode) -> Iterable[FNode]:
+        if formula.node_type == OperatorKind.AND:
+            for argument in formula.args:
+                yield from self.__iter_conjuncts(argument)
+            return
+        yield formula
+
+    def __contains_variable_expression(self, formula: FNode) -> bool:
+        if formula.is_variable_exp():
+            return True
+        return any(self.__contains_variable_expression(argument) for argument in formula.args)
 
     def __is_true_formula_value(self, value) -> bool:
         if isinstance(value, bool):
@@ -341,19 +604,200 @@ class UpCporConverter:
     def __is_false_formula(self, formula: Formula) -> bool:
         return isinstance(formula, PredicateFormula) and formula.Predicate == Utilities.FALSE_PREDICATE
 
-    def __CreateOrFormula(self, n, lActionParameters) -> Formula:
+    def __CreateOrFormula(self, n, lActionParameters, problem) -> Formula:
         cp = CompoundFormula("or")
         for nSub in n:
-            fSub = self.__CreateFormula(nSub, lActionParameters)
+            fSub = self.__CreateFormula(nSub, lActionParameters, problem)
             cp.SimpleAddOperand(fSub)
         return cp
 
-    def __CreateOneOfFormula(self, n, lActionParameters) -> Formula:
+    def __CreateOneOfFormula(self, n, lActionParameters, problem) -> Formula:
         cp = CompoundFormula("oneof")
         for nSub in n:
-            fSub = self.__CreateFormula(nSub, lActionParameters)
+            fSub = self.__CreateFormula(nSub, lActionParameters, problem)
             cp.SimpleAddOperand(fSub)
         return cp
+
+    def __infer_missing_case_hidden_literals(self, problem) -> Tuple[Tuple[FNode, FNode], ...]:
+        hidden_positive_fluents = {
+            str(hidden_fluent): hidden_fluent
+            for hidden_fluent in problem.hidden_fluents
+            if isinstance(hidden_fluent, FNode)
+            and hidden_fluent.node_type == OperatorKind.FLUENT_EXP
+            and not self.__is_case_tag_expression(hidden_fluent)
+        }
+        if len(hidden_positive_fluents) == 0:
+            return tuple()
+
+        case_tag_groups = tuple(self.__iter_case_tag_groups(problem))
+        if len(case_tag_groups) == 0:
+            return tuple()
+
+        explicit_case_assignments: Dict[str, Dict[str, FNode]] = {}
+        case_partitioned_fluents: Set[str] = set()
+        for case_tag_group in case_tag_groups:
+            for case_tag in case_tag_group:
+                explicit_case_assignments.setdefault(str(case_tag), {})
+
+        for constraint in problem.or_constraints:
+            parsed_assignment = self.__parse_case_assignment(constraint, hidden_positive_fluents)
+            if parsed_assignment is None:
+                continue
+            case_tag, fluent_exp, literal = parsed_assignment
+            explicit_case_assignments[str(case_tag)][str(fluent_exp)] = literal
+            case_partitioned_fluents.add(str(fluent_exp))
+
+        if len(case_partitioned_fluents) == 0:
+            return tuple()
+
+        inferred_constraints = []
+        em = problem.environment.expression_manager
+        for case_tag_group in case_tag_groups:
+            for case_tag in case_tag_group:
+                case_assignments = explicit_case_assignments[str(case_tag)]
+                for fluent_key in sorted(case_partitioned_fluents):
+                    if fluent_key in case_assignments:
+                        continue
+                    hidden_fluent = hidden_positive_fluents[fluent_key]
+                    default_value = problem.initial_value(hidden_fluent)
+                    default_is_true = default_value is not None and default_value.is_true()
+                    default_literal = hidden_fluent if default_is_true else em.Not(hidden_fluent)
+                    inferred_constraints.append((em.Not(case_tag), default_literal))
+
+        return tuple(inferred_constraints)
+
+    def __create_compact_case_hidden_constraints(self, problem) -> Optional[Tuple[FNode, ...]]:
+        hidden_positive_fluents = {
+            str(hidden_fluent): hidden_fluent
+            for hidden_fluent in problem.hidden_fluents
+            if isinstance(hidden_fluent, FNode)
+            and hidden_fluent.node_type == OperatorKind.FLUENT_EXP
+            and not self.__is_case_tag_expression(hidden_fluent)
+        }
+        if len(hidden_positive_fluents) == 0:
+            return None
+
+        case_tag_groups = tuple(self.__iter_case_tag_groups(problem))
+        if len(case_tag_groups) != len(problem.oneof_constraints) or len(case_tag_groups) != 1:
+            return None
+
+        case_tag_group = case_tag_groups[0]
+        inferred_case_constraints = self.__infer_missing_case_hidden_literals(problem)
+        all_case_constraints = tuple(problem.or_constraints) + inferred_case_constraints
+
+        case_assignments: Dict[str, Dict[str, FNode]] = {
+            str(case_tag): {} for case_tag in case_tag_group
+        }
+        case_partitioned_fluents: Set[str] = set()
+        for constraint in all_case_constraints:
+            parsed_assignment = self.__parse_case_assignment(constraint, hidden_positive_fluents)
+            if parsed_assignment is None:
+                return None
+            case_tag, fluent_exp, literal = parsed_assignment
+            case_assignments[str(case_tag)][str(fluent_exp)] = literal
+            case_partitioned_fluents.add(str(fluent_exp))
+
+        if len(case_partitioned_fluents) == 0:
+            return None
+
+        ordered_fluents = [
+            hidden_positive_fluents[fluent_key]
+            for fluent_key in sorted(case_partitioned_fluents)
+        ]
+        allowed_assignments = set()
+        for case_tag in case_tag_group:
+            case_assignment = case_assignments[str(case_tag)]
+            if any(str(hidden_fluent) not in case_assignment for hidden_fluent in ordered_fluents):
+                return None
+            allowed_assignments.add(
+                tuple(
+                    not case_assignment[str(hidden_fluent)].is_not()
+                    for hidden_fluent in ordered_fluents
+                )
+            )
+
+        total_assignments = 1 << len(ordered_fluents)
+        excluded_assignments_count = total_assignments - len(allowed_assignments)
+        if excluded_assignments_count < 0 or excluded_assignments_count >= len(case_tag_group):
+            return None
+
+        em = problem.environment.expression_manager
+        if excluded_assignments_count == 0:
+            return tuple(
+                em.Or(hidden_fluent, em.Not(hidden_fluent))
+                for hidden_fluent in ordered_fluents
+            )
+
+        compact_constraints = []
+        for assignment in product((False, True), repeat=len(ordered_fluents)):
+            if assignment in allowed_assignments:
+                continue
+
+            clause_literals = []
+            for hidden_fluent, value in zip(ordered_fluents, assignment):
+                clause_literals.append(em.Not(hidden_fluent) if value else hidden_fluent)
+
+            if len(clause_literals) == 1:
+                compact_constraints.append(clause_literals[0])
+            else:
+                compact_constraints.append(em.Or(clause_literals))
+
+        return tuple(compact_constraints)
+
+    def __iter_case_tag_groups(self, problem):
+        for oneof_constraint in problem.oneof_constraints:
+            case_tag_group = []
+            for item in oneof_constraint:
+                if not isinstance(item, FNode) or item.node_type != OperatorKind.FLUENT_EXP:
+                    case_tag_group = []
+                    break
+                if not self.__is_case_tag_expression(item):
+                    case_tag_group = []
+                    break
+                case_tag_group.append(item)
+            if len(case_tag_group) > 0:
+                yield tuple(sorted(case_tag_group, key=str))
+
+    def __parse_case_assignment(self, constraint, hidden_positive_fluents):
+        if len(constraint) != 2:
+            return None
+
+        case_tag = None
+        literal = None
+        for item in constraint:
+            if (
+                isinstance(item, FNode)
+                and item.is_not()
+                and item.arg(0).node_type == OperatorKind.FLUENT_EXP
+                and self.__is_case_tag_expression(item.arg(0))
+            ):
+                case_tag = item.arg(0)
+            else:
+                literal = item
+
+        if case_tag is None or literal is None:
+            return None
+
+        if literal.node_type == OperatorKind.FLUENT_EXP:
+            fluent_exp = literal
+        elif literal.is_not() and literal.arg(0).node_type == OperatorKind.FLUENT_EXP:
+            fluent_exp = literal.arg(0)
+        else:
+            return None
+
+        if self.__is_case_tag_expression(fluent_exp):
+            return None
+        if str(fluent_exp) not in hidden_positive_fluents:
+            return None
+
+        return case_tag, fluent_exp, literal
+
+    def __is_case_tag_expression(self, fluent_exp: FNode) -> bool:
+        return (
+            isinstance(fluent_exp, FNode)
+            and fluent_exp.node_type == OperatorKind.FLUENT_EXP
+            and fluent_exp.fluent().name.startswith("possible_initial_state_case_")
+        )
 
     def __convert_CPOR_string_to_action_instance(self, string, problem) -> 'up.plans.InstantaneousAction':
         if string != 'None':

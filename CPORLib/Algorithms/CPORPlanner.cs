@@ -32,7 +32,9 @@ namespace CPORLib.Algorithms
             using (new OptionsSnapshot())
             {
                 Options.ComputeCompletePlanTree = true;
-                Options.TagsCount = 2;
+                int iMinTags = GetInitialTagsCount();
+                int iMaxTags = iMinTags;
+                Options.TagsCount = iMinTags;
                 try
                 {
 
@@ -88,11 +90,12 @@ namespace CPORLib.Algorithms
                     
                     if (StuckInLoopPlanBased(pssCurrent))
                     {
-                        TagsCount++;
+                        if (TagsCount < iMaxTags)
+                            TagsCount++;
                     }
                     else
                     {
-                        if (TagsCount > 2)
+                        if (TagsCount > iMinTags)
                             TagsCount--;
                     }
                     
@@ -312,6 +315,35 @@ namespace CPORLib.Algorithms
                     return null;
                 }
             }
+        }
+
+        private int GetInitialTagsCount()
+        {
+            HashSet<string> hsCaseTags = new HashSet<string>();
+            HashSet<string> hsMeaningfulHiddenPredicates = new HashSet<string>();
+            foreach (CompoundFormula cfHidden in Problem.Hidden)
+            {
+                HashSet<Predicate> hsPredicates = new HashSet<Predicate>();
+                cfHidden.GetAllPredicates(hsPredicates);
+                foreach (Predicate p in hsPredicates)
+                {
+                    Predicate pCanonical = p.Canonical();
+                    if (pCanonical.Name.StartsWith("possible_initial_state_case_", StringComparison.Ordinal))
+                    {
+                        hsCaseTags.Add(pCanonical.Name);
+                    }
+                    else
+                    {
+                        hsMeaningfulHiddenPredicates.Add(pCanonical.Name);
+                    }
+                }
+            }
+
+            int iMinTags = Math.Max(2, hsMeaningfulHiddenPredicates.Count + 1);
+            iMinTags = Math.Min(iMinTags, 3);
+            if (hsCaseTags.Count > 0)
+                iMinTags = Math.Min(iMinTags, hsCaseTags.Count);
+            return iMinTags;
         }
 
 
@@ -831,7 +863,17 @@ namespace CPORLib.Algorithms
                 return null;
             }
             PartiallySpecifiedState pssCurrent = stateStack.Pop(); ;
-            if (pssCurrent.IsClosedState(lClosedStates))
+            if (pssCurrent.IsGoalState())
+            {
+                pssCurrent.UpdateClosedStates(lClosedStates, dAlreadyVisitedStates, Domain);
+
+                if (stateStack.Count == 0)
+                {
+                    bDone = true;
+                }
+                bStateHandled = true;
+            }
+            else if (pssCurrent.IsClosedState(lClosedStates))
             {
                 //Debug.WriteLine("Found closed state");
                 pssCurrent.UpdateClosedStates(lClosedStates, dAlreadyVisitedStates, Domain);
