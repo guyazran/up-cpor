@@ -829,14 +829,12 @@ namespace CPORLib.PlanningModel
             List<Formula> lObligatory = new List<Formula>();
             SplitEffects(lConditions, lObligatory);
             CompoundFormula cfPreconditions = new CompoundFormula("and");
-            HashSet<Predicate> lKnowPreconditions = new HashSet<Predicate>();
             if (Preconditions != null)
             {
-                Preconditions.GetAllPredicates(lKnowPreconditions);
                 cfPreconditions.AddOperand(Preconditions);
-                foreach (Predicate p in lKnowPreconditions)
-                    if (!lAlwaysKnown.Contains(p.Name))
-                        cfPreconditions.AddOperand(new PredicateFormula(Predicate.GenerateKnowPredicate(p)));
+                Formula fKnowledgePreconditions = Preconditions.GetKnowledgeFormula(lAlwaysKnown, false);
+                if (fKnowledgePreconditions != null)
+                    cfPreconditions.AddOperand(fKnowledgePreconditions);
                 if (Options.SplitConditionalEffects)
                     cfPreconditions.AddOperand(new GroundedPredicate("NotInAction"));
 

@@ -982,13 +982,14 @@ namespace CPORLib.PlanningModel
                 cfIdentificationGoal.AddOperand(pKNotT);
             }
 
-            cfTrueGoal.AddOperand(Goal);
             HashSet<Predicate> lGoalPredicates = new HashSet<Predicate>();
-            cfTrueGoal.GetAllPredicates(lGoalPredicates);
+            Goal.GetAllPredicates(lGoalPredicates);
 
             foreach (Predicate p in lGoalPredicates)
             {
-                if (!Domain.AlwaysKnown(p))
+                if (Domain.AlwaysKnown(p))
+                    cfTrueGoal.AddOperand(p);
+                else
                     cfTrueGoal.AddOperand(Predicate.GenerateKnowPredicate(p));
             }
 
@@ -1008,11 +1009,10 @@ namespace CPORLib.PlanningModel
                 cfGoal.AddOperand(cfIdentificationGoal);
             }
 
-            if (bPreconditionFailure && dTags.Keys.Count > 1)
-            {
-                cfGoal = cfIdentificationGoal;
-                //cfGoal.AddOperand(cfIdentificationGoal);
-            }
+            // Keep the selected deadend strategy even after a failed action
+            // precondition. For lazy replanning, forcing pure tag refutation can
+            // make the compiled problem unsatisfiable even when the original goal
+            // is still reachable from the revised belief.
 
             if (cfGoal.Operands.Count == 0)
                 Console.Write("*");
@@ -1127,13 +1127,14 @@ namespace CPORLib.PlanningModel
                 cfIdentificationGoal.AddOperand(pKNotT);
             }
 
-            cfTrueGoal.AddOperand(Goal);
             HashSet<Predicate> lGoalPredicates = new HashSet<Predicate>();
-            cfTrueGoal.GetAllPredicates(lGoalPredicates);
+            Goal.GetAllPredicates(lGoalPredicates);
 
             foreach (Predicate p in lGoalPredicates)
             {
-                if (!Domain.AlwaysKnown(p))
+                if (Domain.AlwaysKnown(p))
+                    cfTrueGoal.AddOperand(p);
+                else
                     cfTrueGoal.AddOperand(Predicate.GenerateKnowPredicate(p));
             }
 

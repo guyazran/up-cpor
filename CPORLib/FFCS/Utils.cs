@@ -17,7 +17,11 @@ namespace CPORLib.FFCS
     {
 
         public static int MAX_CONSTANTS = 20000;
-        public static int MAX_PREDICATES = 50;
+        // The original FF port uses a very small fixed predicate table. The
+        // tagged contingent compilation easily exceeds that on the complex test
+        // domains, especially once negative-precondition translation introduces
+        // additional auxiliary predicates.
+        public static int MAX_PREDICATES = 16384;
         public static int MAX_TYPES = 50;
         public static int MAX_ARITY = 5;
         public static int MAX_VARS = 15;
@@ -26,7 +30,7 @@ namespace CPORLib.FFCS
         public static int MAX_TYPE = 20000;
 
 
-        public static  int MAX_OPERATORS = 50;
+        public static int MAX_OPERATORS = 16384;
 
 
         /* in DNF: AND with OR - sons - collect 'hitting set':
@@ -41,7 +45,7 @@ namespace CPORLib.FFCS
         public static  int MAX_TYPE_INTERSECTIONS = 10;
 
 
-        public static  int MAX_RELEVANT_FACTS = 100000;
+        public static  int MAX_RELEVANT_FACTS = 500000;
 
 
         public static int MAX_PLAN_LENGTH = 2000;
@@ -1699,7 +1703,7 @@ namespace CPORLib.FFCS
         public void Init(int i, int iSize, T tInit)
         {
             if (iSize < 1000)
-                Array[i] = new DenseArray<T>(iSize);
+                Array[i] = new DenseArray<T>(iSize, tInit);
             else
                 Array[i] = new SparseArray<T>(iSize, tInit);
         }
@@ -1761,6 +1765,8 @@ namespace CPORLib.FFCS
         public SparseArray(int iSize)
         {
             Size = iSize;
+            Values = new Dictionary<int, T>();
+            InitValue = default(T);
         }
         public SparseArray(int iSize, T vInit)
         {

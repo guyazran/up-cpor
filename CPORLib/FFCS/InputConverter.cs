@@ -125,7 +125,9 @@ namespace CPORLib.FFCS
                 List<PlNode> lSons = new List<PlNode>();
                 foreach (Formula fSub in cf.Operands)
                 {
-                    lSons.Add(Convert(fSub));
+                    PlNode converted = Convert(fSub);
+                    if (converted != null)
+                        lSons.Add(converted);
                 }
                 if (cf.Operator == "and")
                 {
@@ -145,10 +147,8 @@ namespace CPORLib.FFCS
                 for (int i = 0; i < lSons.Count - 1; i++)
                     lSons[i].next = lSons[i + 1];
 
-                if (lSons.Count == 0)
-                    Console.Write("*");
-
-                n.sons = lSons[0];
+                if (lSons.Count > 0)
+                    n.sons = lSons[0];
             }
             else
             { 

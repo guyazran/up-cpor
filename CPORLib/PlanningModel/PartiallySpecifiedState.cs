@@ -1035,6 +1035,15 @@ namespace CPORLib.PlanningModel
             Formula fPreconditions = a.Preconditions;
             if (fPreconditions != null && !IsApplicable(a))
             {
+                Formula fFailedPreconditions = fPreconditions.Reduce(m_lObserved).Negate().Simplify();
+                if (fFailedPreconditions != null &&
+                    !fFailedPreconditions.IsTrue(m_lObserved) &&
+                    !fFailedPreconditions.IsFalse(m_lObserved))
+                {
+                    m_bsInitialBelief.ReviseInitialBelief(fFailedPreconditions, this);
+                    m_bsInitialBelief.ClearProblematicTag();
+                    AddObserved(fFailedPreconditions);
+                }
                 bPreconditionFailure = true;
                 return;
             }

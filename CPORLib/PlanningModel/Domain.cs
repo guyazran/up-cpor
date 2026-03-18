@@ -2086,6 +2086,16 @@ namespace CPORLib.PlanningModel
             }
             return aBestMatch;
         }
+        private Constant ResolveBindingConstant(string sParameterType, string sConstantName)
+        {
+            foreach (Constant c in Constants)
+            {
+                if (c.Name == sConstantName && (sParameterType == "" || ParentOf(sParameterType, c.Type)))
+                    return c;
+            }
+            return null;
+        }
+
         private Dictionary<Parameter, Constant> GetBindings(ParametrizedAction pa, string[] asAction)
         {
             if (pa.Parameters.Count > asAction.Length - 1)//last parameter can be theUtilities.TAG of a KW action
@@ -2093,8 +2103,8 @@ namespace CPORLib.PlanningModel
             Dictionary<Parameter, Constant> dBindings = new Dictionary<Parameter, Constant>();
             for (int iParameter = 0; iParameter < pa.Parameters.Count; iParameter++)
             {
-                Constant c = new Constant(pa.Parameters[iParameter].Type, asAction[iParameter + 1]);
-                if (!Constants.Contains(c))
+                Constant c = ResolveBindingConstant(pa.Parameters[iParameter].Type, asAction[iParameter + 1]);
+                if (c == null)
                     return null;
                 dBindings[pa.Parameters[iParameter]] = c;
             }
