@@ -7,15 +7,6 @@
       "observation": null
     },
     {
-      "action": "sense-left",
-      "observation": [
-        [
-          "free-left",
-          false
-        ]
-      ]
-    },
-    {
       "action": "sense-right",
       "observation": [
         [
@@ -48,6 +39,10 @@
     },
     {
       "action": "checking",
+      "observation": null
+    },
+    {
+      "action": "move-right",
       "observation": null
     }
   ]

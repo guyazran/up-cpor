@@ -12,11 +12,11 @@
       ]
     },
     {
-      "action": "senseon(b6, b1)",
+      "action": "senseon(b1, b6)",
       "observation": [
         [
-          "on(b6, b1)",
-          false
+          "on(b1, b6)",
+          true
         ]
       ]
     },

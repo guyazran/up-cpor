@@ -39,9 +39,18 @@ namespace CPORLib.Tools
 
         public GenericArraySet()
         {
-            All = new bool[Max];
+            All = new bool[Math.Max(Max, CountIndexes)];
             Items = new List<T>();
             Sum = 0;
+        }
+
+        private void EnsureCapacity(int index)
+        {
+            if (index >= All.Length)
+            {
+                int newSize = Math.Max(index + 1, All.Length * 2);
+                Array.Resize(ref All, newSize);
+            }
         }
 
         public GenericArraySet(IEnumerable<T> hs) : this()
@@ -83,6 +92,7 @@ namespace CPORLib.Tools
         public bool Add(T t)
         {
             int index = GetIndex(t);
+            EnsureCapacity(index);
             if (All[index] == false)
             {
                 All[index] = true;
@@ -96,6 +106,7 @@ namespace CPORLib.Tools
         private bool RemoveImpl(T t)
         {
             int index = GetIndex(t);
+            EnsureCapacity(index);
             if (All[index] == true)
             {
                 All[index] = false;
@@ -124,7 +135,7 @@ namespace CPORLib.Tools
             foreach (T t in Items)
             {
                 int index = Indexes[t];
-                if (other.All[index] == false)
+                if (index >= other.All.Length || other.All[index] == false)
                     return false;
             }
             return true;
@@ -140,7 +151,7 @@ namespace CPORLib.Tools
         bool ICollection<T>.Contains(T t)
         {
             int index = GetIndex(t);
-
+            EnsureCapacity(index);
             return All[index];
         }
 

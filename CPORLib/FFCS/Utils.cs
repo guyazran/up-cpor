@@ -21,7 +21,7 @@ namespace CPORLib.FFCS
         // tagged contingent compilation easily exceeds that on the complex test
         // domains, especially once negative-precondition translation introduces
         // additional auxiliary predicates.
-        public static int MAX_PREDICATES = 16384;
+        public static int MAX_PREDICATES = 65536;
         public static int MAX_TYPES = 50;
         public static int MAX_ARITY = 5;
         public static int MAX_VARS = 15;

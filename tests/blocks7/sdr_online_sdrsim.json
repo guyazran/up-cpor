@@ -3,11 +3,11 @@
   "steps": 9,
   "trace": [
     {
-      "action": "senseon(b7, b4)",
+      "action": "senseon(b4, b7)",
       "observation": [
         [
-          "on(b7, b4)",
-          true
+          "on(b4, b7)",
+          false
         ]
       ]
     },
@@ -21,11 +21,11 @@
       ]
     },
     {
-      "action": "senseclear(b5)",
+      "action": "senseclear(b2)",
       "observation": [
         [
-          "clear(b5)",
-          false
+          "clear(b2)",
+          true
         ]
       ]
     },

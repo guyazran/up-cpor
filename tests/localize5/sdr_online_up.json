@@ -7,11 +7,29 @@
       "observation": []
     },
     {
-      "action": "sense-up",
+      "action": "sense-right",
       "observation": [
         [
-          "free-up",
+          "free-right",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "sense-left",
+      "observation": [
+        [
+          "free-left",
           true
+        ]
+      ]
+    },
+    {
+      "action": "sense-down",
+      "observation": [
+        [
+          "free-down",
+          false
         ]
       ]
     },
@@ -22,24 +40,6 @@
     {
       "action": "checking",
       "observation": []
-    },
-    {
-      "action": "sense-up",
-      "observation": [
-        [
-          "free-up",
-          true
-        ]
-      ]
-    },
-    {
-      "action": "sense-right",
-      "observation": [
-        [
-          "free-right",
-          false
-        ]
-      ]
     },
     {
       "action": "move-up",

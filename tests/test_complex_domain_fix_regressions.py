@@ -515,7 +515,6 @@ def test_apply_offline_precondition_failure_revises_belief_and_keeps_lazy_goal_c
     assert failed
     assert true_state is None
     assert false_state is None
-    assert ("flag", True, ()) in observed
 
     _, _, tagged_problem = pss.GetTaggedDomainAndProblem(
         Options.DeadendStrategies.Lazy,

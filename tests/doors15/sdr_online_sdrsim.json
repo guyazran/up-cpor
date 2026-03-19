@@ -1,6 +1,6 @@
 {
   "goal_reached": true,
-  "steps": 433,
+  "steps": 240,
   "trace": [
     {
       "action": "move(p1-8, p1-7)",
@@ -48,15 +48,6 @@
       "observation": null
     },
     {
-      "action": "sense-door(p1-3, p2-3)",
-      "observation": [
-        [
-          "opened(p2-3)",
-          false
-        ]
-      ]
-    },
-    {
       "action": "move(p1-3, p1-4)",
       "observation": null
     },
@@ -73,30 +64,12 @@
       "observation": null
     },
     {
-      "action": "sense-door(p1-7, p2-7)",
-      "observation": [
-        [
-          "opened(p2-7)",
-          false
-        ]
-      ]
-    },
-    {
       "action": "move(p1-7, p1-8)",
       "observation": null
     },
     {
       "action": "move(p1-8, p1-9)",
       "observation": null
-    },
-    {
-      "action": "sense-door(p1-9, p2-9)",
-      "observation": [
-        [
-          "opened(p2-9)",
-          false
-        ]
-      ]
     },
     {
       "action": "move(p1-9, p1-10)",
@@ -125,39 +98,6 @@
       ]
     },
     {
-      "action": "move(p1-11, p1-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p1-10, p1-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p1-9, p1-8)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p1-8, p2-8)",
-      "observation": [
-        [
-          "opened(p2-8)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p1-8, p1-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p1-9, p1-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p1-10, p1-11)",
-      "observation": null
-    },
-    {
       "action": "move(p1-11, p1-12)",
       "observation": null
     },
@@ -169,6 +109,57 @@
           false
         ]
       ]
+    },
+    {
+      "action": "move(p1-12, p1-13)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p1-13, p2-13)",
+      "observation": [
+        [
+          "opened(p2-13)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p1-13, p1-14)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p1-14, p2-14)",
+      "observation": [
+        [
+          "opened(p2-14)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p1-14, p1-15)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p1-15, p2-15)",
+      "observation": [
+        [
+          "opened(p2-15)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p1-15, p1-14)",
+      "observation": null
+    },
+    {
+      "action": "move(p1-14, p1-13)",
+      "observation": null
+    },
+    {
+      "action": "move(p1-13, p1-12)",
+      "observation": null
     },
     {
       "action": "move(p1-12, p1-11)",
@@ -199,16 +190,41 @@
       "observation": null
     },
     {
-      "action": "sense-door(p1-5, p2-5)",
+      "action": "move(p1-5, p1-4)",
+      "observation": null
+    },
+    {
+      "action": "move(p1-4, p1-3)",
+      "observation": null
+    },
+    {
+      "action": "move(p1-3, p1-2)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p1-2, p2-2)",
       "observation": [
         [
-          "opened(p2-5)",
+          "opened(p2-2)",
           false
         ]
       ]
     },
     {
-      "action": "move(p1-5, p1-4)",
+      "action": "move(p1-2, p1-3)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p1-3, p2-3)",
+      "observation": [
+        [
+          "opened(p2-3)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p1-3, p1-4)",
       "observation": null
     },
     {
@@ -229,80 +245,37 @@
       "observation": null
     },
     {
-      "action": "move(p3-4, p3-5)",
+      "action": "move(p3-4, p3-3)",
       "observation": null
     },
     {
-      "action": "sense-door(p3-5, p4-5)",
+      "action": "move(p3-3, p3-2)",
+      "observation": null
+    },
+    {
+      "action": "move(p3-2, p3-1)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p3-1, p4-1)",
       "observation": [
         [
-          "opened(p4-5)",
+          "opened(p4-1)",
           false
         ]
       ]
     },
     {
-      "action": "move(p3-5, p3-6)",
+      "action": "move(p3-1, p3-2)",
       "observation": null
     },
     {
-      "action": "move(p3-6, p3-7)",
+      "action": "move(p3-2, p3-3)",
       "observation": null
     },
     {
-      "action": "move(p3-7, p3-8)",
+      "action": "move(p3-3, p3-4)",
       "observation": null
-    },
-    {
-      "action": "move(p3-8, p3-9)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-9, p4-9)",
-      "observation": [
-        [
-          "opened(p4-9)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-9, p3-8)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-8, p4-8)",
-      "observation": [
-        [
-          "opened(p4-8)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-8, p3-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-7, p3-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-6, p3-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-5, p3-4)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-4, p4-4)",
-      "observation": [
-        [
-          "opened(p4-4)",
-          false
-        ]
-      ]
     },
     {
       "action": "move(p3-4, p3-5)",
@@ -329,20 +302,65 @@
       "observation": null
     },
     {
+      "action": "sense-door(p3-10, p4-10)",
+      "observation": [
+        [
+          "opened(p4-10)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p3-10, p3-11)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p3-11, p4-11)",
+      "observation": [
+        [
+          "opened(p4-11)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p3-11, p3-12)",
       "observation": null
     },
     {
+      "action": "sense-door(p3-12, p4-12)",
+      "observation": [
+        [
+          "opened(p4-12)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p3-12, p3-13)",
       "observation": null
     },
     {
+      "action": "sense-door(p3-13, p4-13)",
+      "observation": [
+        [
+          "opened(p4-13)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p3-13, p3-14)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p3-14, p4-14)",
+      "observation": [
+        [
+          "opened(p4-14)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p3-14, p3-15)",
@@ -423,157 +441,42 @@
       "observation": null
     },
     {
+      "action": "sense-door(p3-3, p4-3)",
+      "observation": [
+        [
+          "opened(p4-3)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p3-3, p3-4)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p3-4, p4-4)",
+      "observation": [
+        [
+          "opened(p4-4)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p3-4, p3-5)",
       "observation": null
     },
     {
+      "action": "sense-door(p3-5, p4-5)",
+      "observation": [
+        [
+          "opened(p4-5)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p3-5, p3-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-6, p3-7)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-7, p4-7)",
-      "observation": [
-        [
-          "opened(p4-7)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-7, p3-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-8, p3-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-9, p3-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-10, p3-11)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-11, p4-11)",
-      "observation": [
-        [
-          "opened(p4-11)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-11, p3-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-12, p3-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-13, p3-14)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-14, p4-14)",
-      "observation": [
-        [
-          "opened(p4-14)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-14, p3-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-13, p3-12)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-12, p4-12)",
-      "observation": [
-        [
-          "opened(p4-12)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-12, p3-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-11, p3-10)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-10, p4-10)",
-      "observation": [
-        [
-          "opened(p4-10)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-10, p3-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-11, p3-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-12, p3-13)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p3-13, p4-13)",
-      "observation": [
-        [
-          "opened(p4-13)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p3-13, p3-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-12, p3-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-11, p3-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-10, p3-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-9, p3-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-8, p3-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p3-7, p3-6)",
       "observation": null
     },
     {
@@ -591,225 +494,6 @@
     },
     {
       "action": "move(p4-6, p5-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-6, p5-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-5, p5-4)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-4, p6-4)",
-      "observation": [
-        [
-          "opened(p6-4)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-4, p5-5)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-5, p6-5)",
-      "observation": [
-        [
-          "opened(p6-5)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-5, p5-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-4, p5-3)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-3, p5-2)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-2, p6-2)",
-      "observation": [
-        [
-          "opened(p6-2)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-2, p5-3)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-3, p5-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-4, p5-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-5, p5-6)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-6, p6-6)",
-      "observation": [
-        [
-          "opened(p6-6)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-6, p5-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-7, p5-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-8, p5-9)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-9, p6-9)",
-      "observation": [
-        [
-          "opened(p6-9)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-9, p5-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-10, p5-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-11, p5-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-12, p5-13)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-13, p6-13)",
-      "observation": [
-        [
-          "opened(p6-13)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-13, p5-14)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-14, p5-15)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-15, p6-15)",
-      "observation": [
-        [
-          "opened(p6-15)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-15, p5-14)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-14, p5-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-13, p5-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-12, p5-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-11, p5-10)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-10, p6-10)",
-      "observation": [
-        [
-          "opened(p6-10)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-10, p5-11)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-11, p6-11)",
-      "observation": [
-        [
-          "opened(p6-11)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-11, p5-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-10, p5-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-9, p5-8)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-8, p6-8)",
-      "observation": [
-        [
-          "opened(p6-8)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-8, p5-7)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-7, p6-7)",
-      "observation": [
-        [
-          "opened(p6-7)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p5-7, p5-6)",
       "observation": null
     },
     {
@@ -850,15 +534,6 @@
       "observation": null
     },
     {
-      "action": "sense-door(p5-3, p6-3)",
-      "observation": [
-        [
-          "opened(p6-3)",
-          false
-        ]
-      ]
-    },
-    {
       "action": "move(p5-3, p5-4)",
       "observation": null
     },
@@ -887,37 +562,39 @@
       "observation": null
     },
     {
+      "action": "sense-door(p5-10, p6-10)",
+      "observation": [
+        [
+          "opened(p6-10)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p5-10, p5-11)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p5-11, p6-11)",
+      "observation": [
+        [
+          "opened(p6-11)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p5-11, p5-12)",
       "observation": null
     },
     {
-      "action": "move(p5-12, p5-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-13, p5-14)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p5-14, p6-14)",
+      "action": "sense-door(p5-12, p6-12)",
       "observation": [
         [
-          "opened(p6-14)",
-          false
+          "opened(p6-12)",
+          true
         ]
       ]
-    },
-    {
-      "action": "move(p5-14, p5-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p5-13, p5-12)",
-      "observation": null
     },
     {
       "action": "move(p5-12, p6-12)",
@@ -945,120 +622,30 @@
       ]
     },
     {
-      "action": "move(p7-10, p7-9)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p7-9, p8-9)",
-      "observation": [
-        [
-          "opened(p8-9)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p7-9, p7-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-8, p7-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-7, p7-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-6, p7-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-5, p7-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-4, p7-3)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p7-3, p8-3)",
-      "observation": [
-        [
-          "opened(p8-3)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p7-3, p7-2)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-2, p7-1)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p7-1, p8-1)",
-      "observation": [
-        [
-          "opened(p8-1)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p7-1, p7-2)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-2, p7-3)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-3, p7-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-4, p7-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-5, p7-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-6, p7-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-7, p7-8)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p7-8, p8-8)",
-      "observation": [
-        [
-          "opened(p8-8)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p7-8, p7-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p7-9, p7-10)",
-      "observation": null
-    },
-    {
       "action": "move(p7-10, p7-11)",
       "observation": null
     },
     {
+      "action": "sense-door(p7-11, p8-11)",
+      "observation": [
+        [
+          "opened(p8-11)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p7-11, p7-12)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p7-12, p8-12)",
+      "observation": [
+        [
+          "opened(p8-12)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p7-12, p7-13)",
@@ -1082,6 +669,57 @@
       "observation": null
     },
     {
+      "action": "move(p9-13, p9-12)",
+      "observation": null
+    },
+    {
+      "action": "move(p9-12, p9-11)",
+      "observation": null
+    },
+    {
+      "action": "move(p9-11, p9-10)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p9-10, p10-10)",
+      "observation": [
+        [
+          "opened(p10-10)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p9-10, p9-11)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p9-11, p10-11)",
+      "observation": [
+        [
+          "opened(p10-11)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p9-11, p9-12)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p9-12, p10-12)",
+      "observation": [
+        [
+          "opened(p10-12)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p9-12, p9-13)",
+      "observation": null
+    },
+    {
       "action": "sense-door(p9-13, p10-13)",
       "observation": [
         [
@@ -1093,6 +731,15 @@
     {
       "action": "move(p9-13, p9-14)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p9-14, p10-14)",
+      "observation": [
+        [
+          "opened(p10-14)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p9-14, p9-15)",
@@ -1110,15 +757,6 @@
     {
       "action": "move(p9-15, p9-14)",
       "observation": null
-    },
-    {
-      "action": "sense-door(p9-14, p10-14)",
-      "observation": [
-        [
-          "opened(p10-14)",
-          false
-        ]
-      ]
     },
     {
       "action": "move(p9-14, p9-13)",
@@ -1161,6 +799,57 @@
       "observation": null
     },
     {
+      "action": "move(p9-4, p9-3)",
+      "observation": null
+    },
+    {
+      "action": "move(p9-3, p9-2)",
+      "observation": null
+    },
+    {
+      "action": "move(p9-2, p9-1)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p9-1, p10-1)",
+      "observation": [
+        [
+          "opened(p10-1)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p9-1, p9-2)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p9-2, p10-2)",
+      "observation": [
+        [
+          "opened(p10-2)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p9-2, p9-3)",
+      "observation": null
+    },
+    {
+      "action": "sense-door(p9-3, p10-3)",
+      "observation": [
+        [
+          "opened(p10-3)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p9-3, p9-4)",
+      "observation": null
+    },
+    {
       "action": "sense-door(p9-4, p10-4)",
       "observation": [
         [
@@ -1171,39 +860,6 @@
     },
     {
       "action": "move(p9-4, p9-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p9-5, p9-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p9-6, p9-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p9-7, p9-8)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p9-8, p10-8)",
-      "observation": [
-        [
-          "opened(p10-8)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p9-8, p9-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p9-7, p9-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p9-6, p9-5)",
       "observation": null
     },
     {
@@ -1235,15 +891,6 @@
     {
       "action": "move(p10-6, p11-6)",
       "observation": null
-    },
-    {
-      "action": "sense-door(p11-6, p12-6)",
-      "observation": [
-        [
-          "opened(p12-6)",
-          false
-        ]
-      ]
     },
     {
       "action": "move(p11-6, p11-5)",
@@ -1307,82 +954,43 @@
       "observation": null
     },
     {
-      "action": "sense-door(p11-9, p12-9)",
-      "observation": [
-        [
-          "opened(p12-9)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p11-9, p11-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-8, p11-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-7, p11-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-6, p11-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-5, p11-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-4, p11-3)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p11-3, p12-3)",
-      "observation": [
-        [
-          "opened(p12-3)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p11-3, p11-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-4, p11-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-5, p11-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-6, p11-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-7, p11-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-8, p11-9)",
-      "observation": null
-    },
-    {
       "action": "move(p11-9, p11-10)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p11-10, p12-10)",
+      "observation": [
+        [
+          "opened(p12-10)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p11-10, p11-11)",
       "observation": null
     },
     {
+      "action": "sense-door(p11-11, p12-11)",
+      "observation": [
+        [
+          "opened(p12-11)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p11-11, p11-12)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p11-12, p12-12)",
+      "observation": [
+        [
+          "opened(p12-12)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p11-12, p11-13)",
@@ -1400,6 +1008,15 @@
     {
       "action": "move(p11-13, p11-14)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p11-14, p12-14)",
+      "observation": [
+        [
+          "opened(p12-14)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p11-14, p11-15)",
@@ -1435,162 +1052,12 @@
       "observation": null
     },
     {
-      "action": "sense-door(p11-10, p12-10)",
-      "observation": [
-        [
-          "opened(p12-10)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p11-10, p11-11)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p11-11, p12-11)",
-      "observation": [
-        [
-          "opened(p12-11)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p11-11, p11-10)",
-      "observation": null
-    },
-    {
       "action": "move(p11-10, p11-9)",
       "observation": null
     },
     {
       "action": "move(p11-9, p11-8)",
       "observation": null
-    },
-    {
-      "action": "move(p11-8, p11-7)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p11-7, p12-7)",
-      "observation": [
-        [
-          "opened(p12-7)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p11-7, p11-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-8, p11-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-9, p11-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-10, p11-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-11, p11-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-12, p11-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-13, p11-14)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p11-14, p12-14)",
-      "observation": [
-        [
-          "opened(p12-14)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p11-14, p11-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-13, p11-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-12, p11-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-11, p11-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-10, p11-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-9, p11-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-8, p11-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-7, p11-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-6, p11-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-5, p11-4)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p11-4, p12-4)",
-      "observation": [
-        [
-          "opened(p12-4)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p11-4, p11-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-5, p11-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-6, p11-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p11-7, p11-8)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p11-8, p12-8)",
-      "observation": [
-        [
-          "opened(p12-8)",
-          false
-        ]
-      ]
     },
     {
       "action": "move(p11-8, p11-7)",
@@ -1634,204 +1101,6 @@
       "observation": null
     },
     {
-      "action": "move(p13-2, p13-3)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-3, p13-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-4, p13-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-5, p13-6)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-6, p14-6)",
-      "observation": [
-        [
-          "opened(p14-6)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-6, p13-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-7, p13-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-8, p13-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-9, p13-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-10, p13-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-11, p13-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-12, p13-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-13, p13-14)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-14, p13-15)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-15, p14-15)",
-      "observation": [
-        [
-          "opened(p14-15)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-15, p13-14)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-14, p13-13)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-13, p13-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-12, p13-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-11, p13-10)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-10, p14-10)",
-      "observation": [
-        [
-          "opened(p14-10)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-10, p13-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-9, p13-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-8, p13-7)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-7, p14-7)",
-      "observation": [
-        [
-          "opened(p14-7)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-7, p13-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-8, p13-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-9, p13-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-10, p13-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-11, p13-12)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-12, p14-12)",
-      "observation": [
-        [
-          "opened(p14-12)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-12, p13-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-11, p13-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-10, p13-9)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-9, p14-9)",
-      "observation": [
-        [
-          "opened(p14-9)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-9, p13-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-8, p13-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-7, p13-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-6, p13-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-5, p13-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-4, p13-3)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-3, p13-2)",
-      "observation": null
-    },
-    {
       "action": "move(p13-2, p13-1)",
       "observation": null
     },
@@ -1857,90 +1126,6 @@
       "observation": null
     },
     {
-      "action": "sense-door(p13-4, p14-4)",
-      "observation": [
-        [
-          "opened(p14-4)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-4, p13-5)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-5, p14-5)",
-      "observation": [
-        [
-          "opened(p14-5)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-5, p13-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-6, p13-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-7, p13-8)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-8, p14-8)",
-      "observation": [
-        [
-          "opened(p14-8)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-8, p13-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-7, p13-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-6, p13-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-5, p13-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-4, p13-3)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-3, p13-2)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-2, p14-2)",
-      "observation": [
-        [
-          "opened(p14-2)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-2, p13-3)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-3, p13-4)",
-      "observation": null
-    },
-    {
       "action": "move(p13-4, p13-5)",
       "observation": null
     },
@@ -1965,12 +1150,39 @@
       "observation": null
     },
     {
+      "action": "sense-door(p13-10, p14-10)",
+      "observation": [
+        [
+          "opened(p14-10)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p13-10, p13-11)",
       "observation": null
     },
     {
+      "action": "sense-door(p13-11, p14-11)",
+      "observation": [
+        [
+          "opened(p14-11)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p13-11, p13-12)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p13-12, p14-12)",
+      "observation": [
+        [
+          "opened(p14-12)",
+          false
+        ]
+      ]
     },
     {
       "action": "move(p13-12, p13-13)",
@@ -1986,106 +1198,17 @@
       ]
     },
     {
-      "action": "move(p13-13, p13-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-12, p13-11)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-11, p14-11)",
-      "observation": [
-        [
-          "opened(p14-11)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-11, p13-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-10, p13-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-9, p13-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-8, p13-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-7, p13-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-6, p13-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-5, p13-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-4, p13-3)",
-      "observation": null
-    },
-    {
-      "action": "sense-door(p13-3, p14-3)",
-      "observation": [
-        [
-          "opened(p14-3)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p13-3, p13-4)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-4, p13-5)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-5, p13-6)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-6, p13-7)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-7, p13-8)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-8, p13-9)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-9, p13-10)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-10, p13-11)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-11, p13-12)",
-      "observation": null
-    },
-    {
-      "action": "move(p13-12, p13-13)",
-      "observation": null
-    },
-    {
       "action": "move(p13-13, p13-14)",
       "observation": null
+    },
+    {
+      "action": "sense-door(p13-14, p14-14)",
+      "observation": [
+        [
+          "opened(p14-14)",
+          true
+        ]
+      ]
     },
     {
       "action": "move(p13-14, p14-14)",

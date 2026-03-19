@@ -1035,15 +1035,6 @@ namespace CPORLib.PlanningModel
             Formula fPreconditions = a.Preconditions;
             if (fPreconditions != null && !IsApplicable(a))
             {
-                Formula fFailedPreconditions = fPreconditions.Reduce(m_lObserved).Negate().Simplify();
-                if (fFailedPreconditions != null &&
-                    !fFailedPreconditions.IsTrue(m_lObserved) &&
-                    !fFailedPreconditions.IsFalse(m_lObserved))
-                {
-                    m_bsInitialBelief.ReviseInitialBelief(fFailedPreconditions, this);
-                    m_bsInitialBelief.ClearProblematicTag();
-                    AddObserved(fFailedPreconditions);
-                }
                 bPreconditionFailure = true;
                 return;
             }
@@ -2787,7 +2778,7 @@ namespace CPORLib.PlanningModel
                 if (a.Preconditions != null)
                     hsPreconditions = a.Preconditions.GetAllPredicates();
 
-                if (psParent.m_dRequiredObservationsForReasoning == null)
+                if (psParent.m_dRequiredObservationsForReasoning == null && m_dRequiredObservationsForReasoning != null)
                     psParent.m_dRequiredObservationsForReasoning = new Dictionary<GroundedPredicate, List<HashSet<GroundedPredicate>>>(m_dRequiredObservationsForReasoning);
 
 
@@ -2981,6 +2972,8 @@ namespace CPORLib.PlanningModel
 
         private bool AddRelevantVariables(Dictionary<GroundedPredicate, List<HashSet<GroundedPredicate>>> dRelevant, Predicate pObservation)
         {
+            if (dRelevant == null || dRelevant.Count == 0)
+                return false;
             bool bChanged = false;
             GroundedPredicate gpObservation = (GroundedPredicate)pObservation;
             if (m_dRequiredObservationsForReasoning == null)

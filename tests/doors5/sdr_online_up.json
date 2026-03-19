@@ -1,53 +1,10 @@
 {
   "goal_reached": true,
-  "steps": 22,
+  "steps": 18,
   "trace": [
-    {
-      "action": "move(p1-3, p1-4)",
-      "observation": []
-    },
-    {
-      "action": "sense-door(p1-4, p2-4)",
-      "observation": [
-        [
-          "opened(p2-4)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p1-4, p1-5)",
-      "observation": []
-    },
-    {
-      "action": "sense-door(p1-5, p2-5)",
-      "observation": [
-        [
-          "opened(p2-5)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p1-5, p1-4)",
-      "observation": []
-    },
-    {
-      "action": "move(p1-4, p1-3)",
-      "observation": []
-    },
     {
       "action": "move(p1-3, p1-2)",
       "observation": []
-    },
-    {
-      "action": "sense-door(p1-2, p2-2)",
-      "observation": [
-        [
-          "opened(p2-2)",
-          false
-        ]
-      ]
     },
     {
       "action": "move(p1-2, p1-1)",
@@ -67,8 +24,26 @@
       "observation": []
     },
     {
+      "action": "sense-door(p1-2, p2-2)",
+      "observation": [
+        [
+          "opened(p2-2)",
+          false
+        ]
+      ]
+    },
+    {
       "action": "move(p1-2, p1-3)",
       "observation": []
+    },
+    {
+      "action": "sense-door(p1-3, p2-3)",
+      "observation": [
+        [
+          "opened(p2-3)",
+          true
+        ]
+      ]
     },
     {
       "action": "move(p1-3, p2-3)",
@@ -79,28 +54,37 @@
       "observation": []
     },
     {
-      "action": "move(p3-3, p3-4)",
+      "action": "move(p3-3, p3-2)",
       "observation": []
     },
     {
-      "action": "move(p3-4, p3-5)",
+      "action": "move(p3-2, p3-1)",
       "observation": []
     },
     {
-      "action": "sense-door(p3-5, p4-5)",
+      "action": "sense-door(p3-1, p4-1)",
       "observation": [
         [
-          "opened(p4-5)",
+          "opened(p4-1)",
           false
         ]
       ]
     },
     {
-      "action": "move(p3-5, p3-4)",
+      "action": "move(p3-1, p3-2)",
       "observation": []
     },
     {
-      "action": "move(p3-4, p3-3)",
+      "action": "sense-door(p3-2, p4-2)",
+      "observation": [
+        [
+          "opened(p4-2)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p3-2, p3-3)",
       "observation": []
     },
     {

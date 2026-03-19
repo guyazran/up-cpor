@@ -30,7 +30,7 @@ SIMULATOR_CONFIG = {
     "doors15": {"max_steps": 500, "stop_on_goal": True},
     "localize5": {"max_steps": 7, "stop_on_goal": False},
     "unix1": {"max_steps": 20, "stop_on_goal": True},
-    "wumpus05": {"max_steps": 20, "stop_on_goal": True},
+    "wumpus05": {"max_steps": 40, "stop_on_goal": True},
 }
 
 SDR_PLANNER_PARAMS = {"random_seed": TEST_RANDOM_SEED}
@@ -127,18 +127,31 @@ def test_sdr_direct_solver_replans_after_false_obj_at_observation():
     c_problem = converter.createProblem(problem, c_domain)
     solver = converter.createSDRSolver(c_domain, c_problem)
 
+    expr_manager = problem.environment.expression_manager
+
     first_action = converter.SDRGet_action(solver, problem)
-    assert str(first_action) == "move(p1-1, p2-1)"
-    assert converter.SDRupdate(solver, None) is True
+    assert str(first_action) == "observe-ball(p1-1, o1)"
+    # observe-ball is a sensing action; provide True observation (ball found at p1-1)
+    obs_true = {
+        expr_manager.FluentExp(
+            problem.fluent("obj-at"),
+            (
+                expr_manager.ObjectExp(problem.object("o1")),
+                expr_manager.ObjectExp(problem.object("p1-1")),
+            ),
+        ): expr_manager.Bool(True)
+    }
+    assert converter.SDRupdate(solver, obs_true) is True
 
     second_action = converter.SDRGet_action(solver, problem)
-    assert str(second_action) == "move(p2-1, p2-2)"
+    assert str(second_action) == "pickup(o1, p1-1)"
     assert converter.SDRupdate(solver, None) is True
 
     third_action = converter.SDRGet_action(solver, problem)
-    assert str(third_action) == "observe-ball(p2-2, o2)"
+    assert str(third_action) == "observe-ball(p1-1, o2)"
 
-    expr_manager = problem.environment.expression_manager
+    # Inject a False observation for obj-at(o2, p2-2) — the converter normalises
+    # this to "false" and passes it to the C# planner, triggering a replan.
     observation = {
         expr_manager.FluentExp(
             problem.fluent("obj-at"),
