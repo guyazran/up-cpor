@@ -73,6 +73,24 @@ def test_cpor_generated_plan_is_valid(domain: str):
     assert solve_cpor_offline(domain)["is_valid"], f"CPOR returned an invalid contingent plan for {domain}"
 
 
+# Regression: AddObserved(fFailedPreconditions) caused these four domains to fail.
+# colorballs2-2 and wumpus05: FF crashed (predicate table overflow) → UNSOLVABLE_PROVEN.
+# doors15 and localize5: plan found but failed ValidatePlanGraph (failure-derived observations
+# polluted m_lObserved during planning; a fresh ValidatePlanGraph PSS lacked them).
+@pytest.mark.parametrize("domain", ["colorballs2-2", "wumpus05"])
+def test_cpor_plan_found_for_add_observed_regression_domains(domain: str):
+    env = make_test_environment(cpor=True)
+    problem = parse_test_problem(domain, env)
+    with env.factory.OneshotPlanner(name="CPORPlanning", params=CPOR_PLANNER_PARAMS) as planner:
+        result = planner.solve(problem)
+    assert result.status == PlanGenerationResultStatus.SOLVED_SATISFICING
+
+
+@pytest.mark.parametrize("domain", ["doors15", "localize5"])
+def test_cpor_plan_valid_for_add_observed_regression_domains(domain: str):
+    assert solve_cpor_offline(domain)["is_valid"]
+
+
 def test_cpor_seeded_doors5_plan_is_reproducible_after_interleaved_solves(tmp_path: Path):
     first_dot = tmp_path / "doors5_first.dot"
     interleaved_dot = tmp_path / "blocks2_interleaved.dot"

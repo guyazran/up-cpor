@@ -525,6 +525,23 @@ def test_apply_offline_precondition_failure_revises_belief_and_keeps_lazy_goal_c
     assert not all(name.startswith("KNot") for name in goal_names)
 
 
+def test_apply_offline_precondition_failure_does_not_pollute_observed():
+    # Regression: AddObserved(fFailedPreconditions) was removed from ApplyOffline.
+    # A precondition failure must leave m_lObserved unchanged; any growth would
+    # allow the planner to build plans that rely on failure-derived "knowledge"
+    # that ValidatePlanGraph cannot reproduce from a fresh belief state.
+    problem = _build_precondition_failure_problem()
+    _, _, c_problem = _convert_problem(problem)
+    pss = c_problem.GetInitialBelief().GetPartiallySpecifiedState()
+
+    observed_before = _predicate_signatures(pss.Observed)
+    _, failed, _, _ = pss.ApplyOffline("finish")
+    observed_after = _predicate_signatures(pss.Observed)
+
+    assert failed
+    assert observed_after == observed_before
+
+
 def test_tagged_actions_preserve_disjunctive_knowledge_preconditions():
     problem = _build_disjunctive_precondition_problem()
     _, _, c_problem = _convert_problem(problem)
