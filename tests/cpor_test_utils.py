@@ -28,6 +28,12 @@ def reset_test_seeds(seed: int = TEST_RANDOM_SEED) -> None:
 
     UpCporConverter.set_random_seed(seed)
 
+    from CPORLib.Tools import GenericArraySet
+    from CPORLib.LogicalUtilities import Predicate, GroundedPredicateFactory
+
+    GenericArraySet[Predicate].Reset()
+    GroundedPredicateFactory.Reset()
+
 
 @lru_cache(maxsize=None)
 def parse_expected_dot(domain: str) -> Dict[str, object]:

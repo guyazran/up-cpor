@@ -15,10 +15,17 @@ namespace CPORLib.Tools
         public static int Max = 10000;
         public static void Reset()
         {
+            if (typeof(Predicate).IsAssignableFrom(typeof(T)))
+            {
+                foreach (var kvp in Indexes)
+                {
+                    if (kvp.Key is GroundedPredicate gp)
+                        gp.Index = -1;
+                }
+                Utilities.ResetStaticPredicateIndexes();
+            }
             Indexes = new Dictionary<T, int>();
             CountIndexes = 0;
-            if (typeof(Predicate).IsAssignableFrom(typeof(T)))
-                Utilities.ResetStaticPredicateIndexes();
         }
 
 
