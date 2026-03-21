@@ -13,6 +13,7 @@ from unified_planning.model import Fluent, InstantaneousAction, Object, Problem,
 from unified_planning.model.contingent import SensingAction
 from unified_planning.model.contingent.contingent_problem import ContingentProblem
 
+from up_cpor.caching_simulator import CachingSequentialSimulator
 from up_cpor.converter import UpCporConverter
 import up_cpor.engine as cpor_engine
 import System
@@ -700,32 +701,6 @@ def test_engine_rewrites_container_stash_patterns():
     ]
 
 
-def test_up_sequential_simulator_caches_are_shared_across_instances_for_the_same_problem():
-    problem = Problem("shared_simulator_cache")
-    done = Fluent("done")
-    problem.add_fluent(done, default_initial_value=False)
-
-    finish = InstantaneousAction("finish")
-    finish.add_effect(done, True)
-    problem.add_action(finish)
-    problem.add_goal(done())
-
-    simulator_a = UPSequentialSimulator(problem, error_on_failed_checks=False)
-    simulator_b = UPSequentialSimulator(problem, error_on_failed_checks=False)
-
-    assert simulator_a._up_cpor_action_info_cache is simulator_b._up_cpor_action_info_cache
-    assert simulator_a._up_cpor_transition_cache is simulator_b._up_cpor_transition_cache
-    assert simulator_a._up_cpor_goal_cache is simulator_b._up_cpor_goal_cache
-
-    initial_state = simulator_a.get_initial_state()
-    next_state = simulator_a.apply(initial_state, finish)
-
-    assert next_state is not None
-    assert len(simulator_a._up_cpor_transition_cache) > 0
-    assert len(simulator_b._up_cpor_transition_cache) == len(simulator_a._up_cpor_transition_cache)
-    assert simulator_b.is_goal(next_state)
-
-
 def test_ff_utils_preserve_initializers_and_large_table_limits():
     matrix = Array2D[int](1)
     matrix.Init(0, 3, 7)
@@ -737,6 +712,41 @@ def test_ff_utils_preserve_initializers_and_large_table_limits():
     assert matrix[0, 0] == 7
     assert matrix[0, 2] == 7
     assert sparse.Get(123) == 0
+
+
+def test_caching_sequential_simulator_caches_are_isolated_per_instance():
+    # Each CachingSequentialSimulator instance owns its caches exclusively.
+    # After one instance populates its transition and goal caches, a second
+    # instance for the same problem is unaffected.  The cached results must
+    # also be functionally correct.
+    problem = Problem("isolated_simulator_cache")
+    done = Fluent("done")
+    problem.add_fluent(done, default_initial_value=False)
+    finish = InstantaneousAction("finish")
+    finish.add_effect(done, True)
+    problem.add_action(finish)
+    problem.add_goal(done())
+
+    sim1 = CachingSequentialSimulator(problem, error_on_failed_checks=False)
+    sim2 = CachingSequentialSimulator(problem, error_on_failed_checks=False)
+
+    # Caches are distinct objects — not shared between instances.
+    assert sim1._action_info_cache is not sim2._action_info_cache
+    assert sim1._transition_cache is not sim2._transition_cache
+    assert sim1._goal_cache is not sim2._goal_cache
+
+    initial_state = sim1.get_initial_state()
+    next_state = sim1.apply(initial_state, finish)
+
+    assert next_state is not None
+    assert len(sim1._transition_cache) > 0
+
+    # sim2's cache is unaffected by sim1's apply().
+    assert len(sim2._transition_cache) == 0
+
+    # Cached result is correct: the successor state satisfies the goal.
+    assert sim1.is_goal(next_state)
+    assert len(sim1._goal_cache) > 0
 
 
 def test_input_converter_handles_empty_compound_formulas():

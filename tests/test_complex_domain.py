@@ -15,6 +15,7 @@ from unified_planning.model.contingent import SensingAction
 
 from cpor_test_utils import TEST_RANDOM_SEED
 from up_test_utils import (
+    CachingSequentialSimulator,
     make_contingent_problem_from_possible_initial_states,
     make_test_environment,
     use_test_environment,
@@ -98,8 +99,9 @@ def _ground_observation(action_instance, state):
     return observation
 
 
-def _execute_contingent_plan_from_state(problem, initial_state, plan, *, label):
-    simulator = UPSequentialSimulator(problem)
+def _execute_contingent_plan_from_state(problem, initial_state, plan, *, label, simulator=None):
+    if simulator is None:
+        simulator = UPSequentialSimulator(problem)
     current_state = initial_state
     node = plan.root_node
 
@@ -144,15 +146,16 @@ def _execute_contingent_plan_from_state(problem, initial_state, plan, *, label):
 
 
 def _assert_plan_reaches_goal_from_checked_states(problem, possible_states, plan, *, label):
-    initial_state = UPSequentialSimulator(problem).get_initial_state()
-    _execute_contingent_plan_from_state(problem, initial_state, plan, label=f"{label}:pddl_initial")
-
+    simulator = CachingSequentialSimulator(problem)
+    initial_state = simulator.get_initial_state()
+    _execute_contingent_plan_from_state(
+        problem, initial_state, plan, label=f"{label}:pddl_initial", simulator=simulator
+    )
     for state_index, state in enumerate(possible_states):
         _execute_contingent_plan_from_state(
-            problem,
-            state,
-            plan,
+            problem, state, plan,
             label=f"{label}:possible_state_{state_index}",
+            simulator=simulator,
         )
 
 

@@ -8,14 +8,13 @@ from unified_planning.engines.mixins.compiler import CompilationKind
 import unified_planning as up
 from unified_planning.model import ProblemKind, AbstractProblem
 from unified_planning.model import UPState
-from unified_planning.model.mixins.objects_set import ObjectsSetMixin
 from unified_planning.model.contingent.contingent_problem import ContingentProblem
 from unified_planning.engines.results import PlanGenerationResultStatus, PlanGenerationResult
 from unified_planning.engines.sequential_simulator import UPSequentialSimulator
-from unified_planning.exceptions import UPConflictingEffectsException, UPInvalidActionError
+from up_cpor.caching_simulator import CachingSequentialSimulator
 from unified_planning.plans.contingent_plan import ContingentPlanNode
 
-from typing import Any, Type, IO, Optional, Callable, Dict, cast
+from typing import Type, IO, Optional, Callable, Dict
 import warnings
 from up_cpor.converter import CporPlanGraphError, UpCporConverter
 
@@ -23,149 +22,6 @@ from up_cpor.converter import CporPlanGraphError, UpCporConverter
 # Keep simulator states shallow: the complex-domain tests validate many long
 # quantified traces, and deep UPState ancestry makes repeated lookups expensive.
 UPState.MAX_ANCESTORS = 1
-
-
-_ORIGINAL_UP_SEQUENTIAL_SIMULATOR_INIT = UPSequentialSimulator.__init__
-_ORIGINAL_UP_SEQUENTIAL_SIMULATOR_APPLY = UPSequentialSimulator.apply
-_ORIGINAL_UP_SEQUENTIAL_SIMULATOR_IS_GOAL = UPSequentialSimulator.is_goal
-_UP_SIMULATOR_SHARED_CACHES: Dict[int, Dict[str, Any]] = {}
-
-
-def _sorted_fluent_dependencies(expressions) -> tuple:
-    fluent_dependencies = set()
-    for expression in expressions:
-        fluent_dependencies.update(expression.environment.free_vars_extractor.get(expression))
-    return tuple(sorted(fluent_dependencies, key=str))
-
-
-def _build_cached_action_info(simulator: UPSequentialSimulator, grounded_action) -> Dict[str, Any]:
-    if grounded_action.simulated_effect is not None:
-        return {"cacheable": False}
-
-    expanded_effects = []
-    for effect in grounded_action.effects:
-        expanded_effects.extend(
-            effect.expand_effect(cast(ObjectsSetMixin, simulator._problem))
-        )
-
-    relevant_expressions = list(grounded_action.preconditions)
-    for effect in expanded_effects:
-        relevant_expressions.append(effect.fluent)
-        relevant_expressions.append(effect.condition)
-        relevant_expressions.append(effect.value)
-    relevant_expressions.extend(simulator._state_invariants)
-
-    return {
-        "cacheable": True,
-        "preconditions": tuple(grounded_action.preconditions),
-        "expanded_effects": tuple(expanded_effects),
-        "relevant_fluents": _sorted_fluent_dependencies(relevant_expressions),
-    }
-
-
-def _project_state_values(state, relevant_fluents) -> tuple:
-    return tuple(state.get_value(fluent_exp) for fluent_exp in relevant_fluents)
-
-
-def _compute_cached_transition(simulator: UPSequentialSimulator, state, action_info):
-    evaluate = lambda expression: simulator._se.evaluate(expression, state)
-
-    for precondition in action_info["preconditions"]:
-        evaluated = evaluate(precondition)
-        if not evaluated.is_bool_constant() or not evaluated.bool_constant_value():
-            return None
-
-    updated_values = {}
-    assigned_fluents = set()
-    expression_manager = simulator._problem.environment.expression_manager
-
-    try:
-        for effect in action_info["expanded_effects"]:
-            fluent, value = simulator._evaluate_effect(
-                effect,
-                state,
-                updated_values,
-                assigned_fluents,
-                expression_manager,
-            )
-            if fluent is not None:
-                updated_values[fluent] = value
-    except (UPConflictingEffectsException, UPInvalidActionError):
-        return None
-
-    next_state = state.make_child(updated_values)
-    for state_invariant in simulator._state_invariants:
-        evaluated = simulator._se.evaluate(state_invariant, next_state)
-        if not evaluated.is_bool_constant() or not evaluated.bool_constant_value():
-            return None
-
-    return tuple(sorted(updated_values.items(), key=lambda item: str(item[0])))
-
-
-def _fast_up_sequential_simulator_init(self, problem, error_on_failed_checks: bool = True, **kwargs):
-    _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_INIT(
-        self, problem, error_on_failed_checks=error_on_failed_checks, **kwargs
-    )
-    shared_cache = _UP_SIMULATOR_SHARED_CACHES.setdefault(
-        id(problem),
-        {
-            "action_info_cache": {},
-            "transition_cache": {},
-            "goal_cache": {},
-            "goal_fluents": _sorted_fluent_dependencies(self._problem.goals),
-        },
-    )
-    self._up_cpor_action_info_cache = shared_cache["action_info_cache"]
-    self._up_cpor_transition_cache = shared_cache["transition_cache"]
-    self._up_cpor_goal_cache = shared_cache["goal_cache"]
-    self._up_cpor_goal_fluents = shared_cache["goal_fluents"]
-
-
-def _fast_up_sequential_simulator_apply(self, state, action_or_action_instance, parameters=None):
-    action, params = self._get_action_and_parameters(action_or_action_instance, parameters)
-    action_key = (action, params)
-    action_info = self._up_cpor_action_info_cache.get(action_key)
-    if action_info is None:
-        grounded_action = self._ground_action(action, params)
-        if grounded_action is None:
-            return None
-        action_info = _build_cached_action_info(self, grounded_action)
-        self._up_cpor_action_info_cache[action_key] = action_info
-
-    if not action_info["cacheable"]:
-        return _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_APPLY(
-            self, state, action_or_action_instance, parameters
-        )
-
-    transition_key = (action_key, _project_state_values(state, action_info["relevant_fluents"]))
-    cached_transition = self._up_cpor_transition_cache.get(transition_key, False)
-    if cached_transition is False:
-        cached_transition = _compute_cached_transition(self, state, action_info)
-        self._up_cpor_transition_cache[transition_key] = cached_transition
-
-    if cached_transition is None:
-        return None
-
-    return state.make_child(dict(cached_transition))
-
-
-def _fast_up_sequential_simulator_is_goal(self, state):
-    if len(self._up_cpor_goal_fluents) == 0:
-        return _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_IS_GOAL(self, state)
-
-    goal_key = _project_state_values(state, self._up_cpor_goal_fluents)
-    cached_value = self._up_cpor_goal_cache.get(goal_key, None)
-    if cached_value is None:
-        cached_value = _ORIGINAL_UP_SEQUENTIAL_SIMULATOR_IS_GOAL(self, state)
-        self._up_cpor_goal_cache[goal_key] = cached_value
-    return cached_value
-
-
-if not getattr(UPSequentialSimulator, "_up_cpor_fast_cache_installed", False):
-    UPSequentialSimulator.__init__ = _fast_up_sequential_simulator_init
-    UPSequentialSimulator.apply = _fast_up_sequential_simulator_apply
-    UPSequentialSimulator.is_goal = _fast_up_sequential_simulator_is_goal
-    UPSequentialSimulator._up_cpor_fast_cache_installed = True
 
 
 def _is_empty_observation(observation) -> bool:
@@ -344,7 +200,7 @@ def _normalize_linear_plan(problem, root_node):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        simulator = UPSequentialSimulator(problem, error_on_failed_checks=False)
+        simulator = CachingSequentialSimulator(problem, error_on_failed_checks=False)
     validation_states = _decode_plan_validation_states(problem, simulator)
     normalized_actions = list(linear_actions)
 

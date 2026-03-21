@@ -18,6 +18,7 @@ from unified_planning.model.mixins.metrics import MetricsMixin
 from unified_planning.model.mixins.objects_set import ObjectsSetMixin
 from unified_planning.model.mixins.time_model import TimeModelMixin
 from unified_planning.model.mixins.user_types_set import UserTypesSetMixin
+from up_cpor.caching_simulator import CachingSequentialSimulator
 
 from domains import TESTS_DIR
 
