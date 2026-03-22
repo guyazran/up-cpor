@@ -44,15 +44,25 @@ class UpCporConverter:
         p = Problem(problem.name, domain)
         em = problem.environment.expression_manager
 
-        for f, v in problem.initial_values.items():
-            if self.__is_hidden_initial_fluent(problem, f):
-                continue
+        # Precompute a closed set of hidden fluent expressions for O(1) lookup,
+        # including both positive and negated forms.  This avoids creating a
+        # Not-expression inside the per-fluent loop.
+        raw_hidden = getattr(problem, "hidden_fluents", None) or ()
+        hidden_fluents_set = frozenset(raw_hidden) | frozenset(em.Not(f) for f in raw_hidden)
 
-            gp = self.__CreatePredicate(f, False, None)
+        # Only add True initial values. False values for non-hidden predicates
+        # are filled in by PrepareForPlanning() → CompleteKnownState() on the
+        # planning path, and the Simulator evaluates absent predicates as False
+        # (CWA), so they do not need to be added explicitly here.  Always-
+        # constant predicates whose initial value is False (e.g., adj(l1, l2)
+        # for non-adjacent pairs in doors15) are also correctly omitted:
+        # CompleteKnownState skips always-constant-AND-always-known predicates,
+        # and the K-domain writer uses CWA for them in the PDDL output.
+        for f, v in problem.initial_values.items():
+            if f in hidden_fluents_set:
+                continue
             if v.is_true():
-                p.AddKnown(gp)
-            elif v.is_false():
-                gp.Negation = True
+                gp = self.__CreatePredicate(f, False, None)
                 p.AddKnown(gp)
 
         compact_hidden_constraints = self.__create_compact_case_hidden_constraints(problem)
@@ -140,6 +150,13 @@ class UpCporConverter:
     def createSDRSimulator(self, problem):
         c_domain = self.createDomain(problem)
         c_problem = self.createProblem(problem, c_domain)
+        # SDRPlanner (via PlannerBase) calls PrepareForPlanning() which calls
+        # CompleteKnownState(). The Simulator does not, so we call it here so
+        # the initial BeliefState has explicit False values for predicates that
+        # are initially False. Without this, the SAT solver treats them as
+        # unknown and can overflow (MsfLicenseException) on larger domains.
+        c_domain.ComputeAlwaysKnown()
+        c_problem.CompleteKnownState()
         c_simulator = Simulator(c_domain, c_problem)
         return c_simulator
 

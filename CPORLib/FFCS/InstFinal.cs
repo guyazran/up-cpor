@@ -28,6 +28,26 @@ namespace CPORLib.FFCS
         static Array2D<int> lneg = new Array2D<int>(MAX_PREDICATES);// new int[MAX_PREDICATES];
         static Array2D<int> luse = new Array2D<int>(MAX_PREDICATES);// new int[MAX_PREDICATES];
         static Array2D<int> lindex = new Array2D<int>(MAX_PREDICATES);// new int[MAX_PREDICATES];
+        // Tracks the outer-dimension capacity of the static Array2D fields above.
+        // Initialised from the actual allocation so EnsureCapacity can skip
+        // re-allocations when the capacity is already sufficient.
+        private static int _allocatedCapacity = lpos.Array.Length;
+
+        /// <summary>
+        /// Ensures the static Array2D fields can accommodate at least
+        /// <paramref name="capacity"/> predicate indices.  Reallocates only
+        /// when the requested capacity exceeds the current one.
+        /// </summary>
+        public static void EnsureCapacity(int capacity)
+        {
+            if (capacity <= _allocatedCapacity)
+                return;
+            lpos   = new Array2D<int>(capacity);
+            lneg   = new Array2D<int>(capacity);
+            luse   = new Array2D<int>(capacity);
+            lindex = new Array2D<int>(capacity);
+            _allocatedCapacity = capacity;
+        }
  /*        
         static IntArray2D lpos = new IntArray2D(MAX_PREDICATES);// new int[MAX_PREDICATES];
         static IntArray2D lneg = new IntArray2D(MAX_PREDICATES);// new int[MAX_PREDICATES];

@@ -7,11 +7,11 @@
       "observation": []
     },
     {
-      "action": "sense-right",
+      "action": "sense-up",
       "observation": [
         [
-          "free-right",
-          false
+          "free-up",
+          true
         ]
       ]
     },

@@ -305,6 +305,18 @@ namespace CPORLib.FFCS
         {
             //EfficientArrayMemory.Reset();
 
+            // Scale FF array sizes to the actual domain complexity to avoid
+            // over-allocating for small domains.  An 8x safety factor covers
+            // predicates added during translation (negation, knowledge,
+            // derived predicates).  The overflow check in
+            // InputConverter.Process will catch any remaining shortfall.
+            if (m_dDomain != null)
+            {
+                Constants.MAX_PREDICATES = Math.Max(256,
+                    Math.Min(65536, m_dDomain.Predicates.Count * 8));
+                Constants.MAX_OPERATORS = Math.Max(256,
+                    Math.Min(16384, m_dDomain.Actions.Count * 8));
+            }
 
             DP = new DomainProperties();
             Inertia = new Inertia();
@@ -317,6 +329,8 @@ namespace CPORLib.FFCS
             IE = new InstEasy();
             Parse = new Parse();
             RLX = new Relax();
+
+            InstFinal.EnsureCapacity(Constants.MAX_PREDICATES);
 
             InputConverter cv = new InputConverter();
             cv.Process(m_dDomain, m_pProblem);

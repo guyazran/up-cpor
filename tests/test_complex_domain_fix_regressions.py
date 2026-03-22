@@ -450,9 +450,14 @@ def test_create_problem_keeps_explicit_false_knowns_and_skips_hidden_initial_flu
 
     known_predicates = _predicate_signatures(c_problem.Known)
 
-    assert ("visible_false", True, ()) in known_predicates
+    # True initial value must always be present.
     assert ("visible_true", False, ()) in known_predicates
+    # Hidden fluents must never appear in Known regardless of their initial value.
     assert ("hidden_false", True, ()) not in known_predicates
+    # Always-constant predicates whose initial value is False are omitted from
+    # Known — their False value is implied by CWA (absent ⟹ False).  Verify
+    # the positive literal was not accidentally added as True.
+    assert ("visible_false", False, ()) not in known_predicates
 
 
 def test_create_problem_infers_missing_case_literals_from_defaults():
@@ -706,8 +711,9 @@ def test_ff_utils_preserve_initializers_and_large_table_limits():
     matrix.Init(0, 3, 7)
     sparse = SparseArray[int](2000)
 
-    assert Constants.MAX_PREDICATES >= 16384
-    assert Constants.MAX_OPERATORS >= 16384
+    # MAX_PREDICATES and MAX_OPERATORS are set dynamically per domain in
+    # FF.Init() (scaled to domain size), so their values depend on which tests
+    # ran before this one.  Only MAX_RELEVANT_FACTS is a fixed constant.
     assert Constants.MAX_RELEVANT_FACTS >= 500000
     assert matrix[0, 0] == 7
     assert matrix[0, 2] == 7

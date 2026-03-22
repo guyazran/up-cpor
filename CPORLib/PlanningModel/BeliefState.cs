@@ -50,6 +50,22 @@ namespace CPORLib.PlanningModel
 
         private int m_cNonDetChoices;
 
+        // Cache Predicate.ToString() results to avoid repeated string allocations in
+        // ChoosePreferredPredicate, which is called O(N²) times during state selection
+        // for domains with many unknown predicates.
+        private static readonly Dictionary<Predicate, string> s_predStringCache =
+            new Dictionary<Predicate, string>();
+
+        private static string GetPredicateString(Predicate p)
+        {
+            if (!s_predStringCache.TryGetValue(p, out string s))
+            {
+                s = p.ToString();
+                s_predStringCache[p] = s;
+            }
+            return s;
+        }
+
         public Dictionary<string, double> FunctionValues { get; private set; }
 
         public BeliefState(Problem p)
@@ -1443,8 +1459,14 @@ namespace CPORLib.PlanningModel
             {
                 bAllTrue = false;//choosing true first is better in some domains
                 bAllFalse = false;//but not in others...
-                return ChoosePreferredPredicate(lUnknown);
-                //return lUnknown[RandomGenerator.Next(lUnknown.Count)]; the order of the variables is already randomized - miFF.Search.gHt as well return the first one. This is important because oneofs appear first.
+                // Return the first non-synthetic predicate in iteration order (oneofs appear
+                // first due to GetHiddenPredicates ordering), falling back to the first
+                // predicate overall. Iteration order is stable because Predicate.GetHashCode
+                // uses StableHash and HashSet enumerates in insertion order.
+                foreach (Predicate p in lUnknown)
+                    if (!IsSyntheticCasePredicate(p))
+                        return p;
+                return lUnknown.First();
             }
             List<Predicate>[] alPredicates = new List<Predicate>[6];
             for (int i = 0; i < alPredicates.Length; i++)
@@ -1474,70 +1496,85 @@ namespace CPORLib.PlanningModel
                 // if (bAllFalse || bAllTrue)
                 //    return p;
             }
+            // Return the first element of the highest-priority non-empty bucket.
+            // All elements in buckets 0-2 are non-synthetic; buckets 3-5 are synthetic.
+            // Within each bucket, iteration order is preserved (stable, insertion-based).
             if (alPredicates[0].Count > 0)
             {
                 bAllTrue = true;
                 bAllFalse = false;
-                return ChoosePreferredPredicate(alPredicates[0]);
-                //return alPredicates[0][RandomGenerator.Next(alPredicates[0].Count)];
+                return alPredicates[0][0];
             }
             if (alPredicates[1].Count > 0)
             {
                 bAllTrue = false;
                 bAllFalse = true;
-                return ChoosePreferredPredicate(alPredicates[1]);
-                //return alPredicates[1][RandomGenerator.Next(alPredicates[1].Count)];
+                return alPredicates[1][0];
             }
             if (alPredicates[2].Count > 0)
             {
                 bAllTrue = false;
                 bAllFalse = false;
-                return ChoosePreferredPredicate(alPredicates[2]);
-                //return alPredicates[2][RandomGenerator.Next(alPredicates[2].Count)];
+                return alPredicates[2][0];
             }
             if (alPredicates[3].Count > 0)
             {
                 bAllTrue = true;
                 bAllFalse = false;
-                return ChoosePreferredPredicate(alPredicates[3]);
+                return alPredicates[3][0];
             }
             if (alPredicates[4].Count > 0)
             {
                 bAllTrue = false;
                 bAllFalse = true;
-                return ChoosePreferredPredicate(alPredicates[4]);
+                return alPredicates[4][0];
             }
             if (alPredicates[5].Count > 0)
             {
                 bAllTrue = false;
                 bAllFalse = false;
-                return ChoosePreferredPredicate(alPredicates[5]);
+                return alPredicates[5][0];
             }
-            return ChoosePreferredPredicate(lUnknown);
+            foreach (Predicate p in lUnknown)
+                if (!IsSyntheticCasePredicate(p))
+                    return p;
+            return lUnknown.First();
         }
 
         private Predicate ChoosePreferredPredicate(IEnumerable<Predicate> lCandidates)
         {
             Predicate pBest = null;
+            bool bBestSynthetic = false;
+            string sBestStr = null;
             foreach (Predicate pCandidate in lCandidates)
             {
                 if (pBest == null)
                 {
                     pBest = pCandidate;
+                    bBestSynthetic = IsSyntheticCasePredicate(pCandidate);
                     continue;
                 }
 
-                bool bBestSynthetic = IsSyntheticCasePredicate(pBest);
                 bool bCandidateSynthetic = IsSyntheticCasePredicate(pCandidate);
                 if (bBestSynthetic != bCandidateSynthetic)
                 {
                     if (!bCandidateSynthetic)
+                    {
                         pBest = pCandidate;
+                        bBestSynthetic = false;
+                        sBestStr = null;
+                    }
                     continue;
                 }
 
-                if (string.CompareOrdinal(pCandidate.ToString(), pBest.ToString()) < 0)
+                if (sBestStr == null)
+                    sBestStr = GetPredicateString(pBest);
+                string sCandidateStr = GetPredicateString(pCandidate);
+                if (string.CompareOrdinal(sCandidateStr, sBestStr) < 0)
+                {
                     pBest = pCandidate;
+                    sBestStr = sCandidateStr;
+                }
             }
             return pBest;
         }
@@ -2363,7 +2400,7 @@ namespace CPORLib.PlanningModel
                 if (!IsSyntheticCasePredicate(pHidden))
                     lCandidates.Add(pHidden);
             }
-            lCandidates.Sort((pFirst, pSecond) => string.CompareOrdinal(pFirst.ToString(), pSecond.ToString()));
+            lCandidates.Sort((pFirst, pSecond) => string.CompareOrdinal(GetPredicateString(pFirst), GetPredicateString(pSecond)));
             return lCandidates;
         }
 

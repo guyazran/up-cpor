@@ -22,7 +22,7 @@ namespace CPORLib.PlanningModel
         public List<Predicate> Predicates { get; protected set; }
         public List<string> Functions { get; protected set; }
         public List<string> m_lAlwaysKnown { get; protected set; }
-        private List<string> m_lAlwaysConstant;
+        public List<string> m_lAlwaysConstant { get; private set; }
         private List<string> m_lObservable;
 
         public bool IsSimple { get; private set; }

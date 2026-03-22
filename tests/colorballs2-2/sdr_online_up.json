@@ -1,44 +1,13 @@
 {
   "goal_reached": true,
-  "steps": 13,
+  "steps": 17,
   "trace": [
     {
-      "action": "observe-ball(p1-1, o1)",
-      "observation": [
-        [
-          "obj-at(o1, p1-1)",
-          true
-        ]
-      ]
-    },
-    {
-      "action": "pickup(o1, p1-1)",
+      "action": "move(p1-1, p2-1)",
       "observation": []
     },
     {
-      "action": "observe-ball(p1-1, o2)",
-      "observation": [
-        [
-          "obj-at(o2, p1-1)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p1-1, p1-2)",
-      "observation": []
-    },
-    {
-      "action": "observe-ball(p1-2, o2)",
-      "observation": [
-        [
-          "obj-at(o2, p1-2)",
-          false
-        ]
-      ]
-    },
-    {
-      "action": "move(p1-2, p2-2)",
+      "action": "move(p2-1, p2-2)",
       "observation": []
     },
     {
@@ -51,7 +20,54 @@
       ]
     },
     {
+      "action": "move(p2-2, p1-2)",
+      "observation": []
+    },
+    {
+      "action": "observe-ball(p1-2, o1)",
+      "observation": [
+        [
+          "obj-at(o1, p1-2)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p1-2, p2-2)",
+      "observation": []
+    },
+    {
       "action": "pickup(o2, p2-2)",
+      "observation": []
+    },
+    {
+      "action": "observe-ball(p2-2, o1)",
+      "observation": [
+        [
+          "obj-at(o1, p2-2)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p2-2, p2-1)",
+      "observation": []
+    },
+    {
+      "action": "observe-ball(p2-1, o1)",
+      "observation": [
+        [
+          "obj-at(o1, p2-1)",
+          false
+        ]
+      ]
+    },
+    {
+      "action": "move(p2-1, p1-1)",
+      "observation": []
+    },
+    {
+      "action": "pickup(o1, p1-1)",
       "observation": []
     },
     {
@@ -64,14 +80,14 @@
       ]
     },
     {
-      "action": "trash(o1, blue, t4, p2-2)",
+      "action": "trash(o1, blue, t1, p1-1)",
       "observation": []
     },
     {
-      "action": "observe-color(blue, o2)",
+      "action": "observe-color(purple, o2)",
       "observation": [
         [
-          "color(o2, blue)",
+          "color(o2, purple)",
           false
         ]
       ]
@@ -86,7 +102,7 @@
       ]
     },
     {
-      "action": "trash(o2, green, t4, p2-2)",
+      "action": "trash(o2, green, t1, p1-1)",
       "observation": []
     }
   ]

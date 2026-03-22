@@ -12,20 +12,20 @@
       ]
     },
     {
-      "action": "senseon(b1, b6)",
+      "action": "senseon(b6, b1)",
       "observation": [
         [
-          "on(b1, b6)",
-          true
+          "on(b6, b1)",
+          false
         ]
       ]
     },
     {
-      "action": "senseclear(b2)",
+      "action": "senseclear(b5)",
       "observation": [
         [
-          "clear(b2)",
-          true
+          "clear(b5)",
+          false
         ]
       ]
     },

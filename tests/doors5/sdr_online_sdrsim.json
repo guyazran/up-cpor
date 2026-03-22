@@ -41,20 +41,20 @@
       "observation": null
     },
     {
-      "action": "move(p3-2, p3-1)",
+      "action": "move(p3-2, p3-3)",
       "observation": null
     },
     {
-      "action": "sense-door(p3-1, p4-1)",
+      "action": "sense-door(p3-3, p4-3)",
       "observation": [
         [
-          "opened(p4-1)",
+          "opened(p4-3)",
           false
         ]
       ]
     },
     {
-      "action": "move(p3-1, p3-2)",
+      "action": "move(p3-3, p3-2)",
       "observation": null
     },
     {

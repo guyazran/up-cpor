@@ -130,25 +130,33 @@ def test_sdr_direct_solver_replans_after_false_obj_at_observation():
     expr_manager = problem.environment.expression_manager
 
     first_action = converter.SDRGet_action(solver, problem)
-    assert str(first_action) == "observe-ball(p1-1, o1)"
-    # observe-ball is a sensing action; provide True observation (ball found at p1-1)
+    assert str(first_action) == "move(p1-1, p2-1)"
+    assert converter.SDRupdate(solver, None) is True
+
+    second_action = converter.SDRGet_action(solver, problem)
+    assert str(second_action) == "move(p2-1, p2-2)"
+    assert converter.SDRupdate(solver, None) is True
+
+    # observe-ball is a sensing action; provide True observation (ball found at p2-2)
+    third_action = converter.SDRGet_action(solver, problem)
+    assert str(third_action) == "observe-ball(p2-2, o2)"
     obs_true = {
         expr_manager.FluentExp(
             problem.fluent("obj-at"),
             (
-                expr_manager.ObjectExp(problem.object("o1")),
-                expr_manager.ObjectExp(problem.object("p1-1")),
+                expr_manager.ObjectExp(problem.object("o2")),
+                expr_manager.ObjectExp(problem.object("p2-2")),
             ),
         ): expr_manager.Bool(True)
     }
     assert converter.SDRupdate(solver, obs_true) is True
 
-    second_action = converter.SDRGet_action(solver, problem)
-    assert str(second_action) == "pickup(o1, p1-1)"
+    fourth_action = converter.SDRGet_action(solver, problem)
+    assert str(fourth_action) == "move(p2-2, p1-2)"
     assert converter.SDRupdate(solver, None) is True
 
-    third_action = converter.SDRGet_action(solver, problem)
-    assert str(third_action) == "observe-ball(p1-1, o2)"
+    fifth_action = converter.SDRGet_action(solver, problem)
+    assert str(fifth_action) == "observe-ball(p1-2, o1)"
 
     # Inject a False observation for obj-at(o2, p2-2) — the converter normalises
     # this to "false" and passes it to the C# planner, triggering a replan.

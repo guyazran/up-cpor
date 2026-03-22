@@ -7,19 +7,19 @@
       "observation": null
     },
     {
-      "action": "sense-right",
+      "action": "sense-down",
       "observation": [
         [
-          "free-right",
+          "free-down",
           true
         ]
       ]
     },
     {
-      "action": "sense-down",
+      "action": "sense-right",
       "observation": [
         [
-          "free-down",
+          "free-right",
           true
         ]
       ]

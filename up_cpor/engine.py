@@ -7,7 +7,6 @@ from unified_planning.engines.mixins.action_selector import ActionSelectorMixin
 from unified_planning.engines.mixins.compiler import CompilationKind
 import unified_planning as up
 from unified_planning.model import ProblemKind, AbstractProblem
-from unified_planning.model import UPState
 from unified_planning.model.contingent.contingent_problem import ContingentProblem
 from unified_planning.engines.results import PlanGenerationResultStatus, PlanGenerationResult
 from unified_planning.engines.sequential_simulator import UPSequentialSimulator
@@ -17,11 +16,6 @@ from unified_planning.plans.contingent_plan import ContingentPlanNode
 from typing import Type, IO, Optional, Callable, Dict
 import warnings
 from up_cpor.converter import CporPlanGraphError, UpCporConverter
-
-
-# Keep simulator states shallow: the complex-domain tests validate many long
-# quantified traces, and deep UPState ancestry makes repeated lookups expensive.
-UPState.MAX_ANCESTORS = 1
 
 
 def _is_empty_observation(observation) -> bool:
@@ -198,14 +192,23 @@ def _normalize_linear_plan(problem, root_node):
     if linear_actions is None or len(linear_actions) < 2:
         return root_node
 
+    normalized_actions = list(linear_actions)
+
+    # Cheap O(n) scans first — defer the expensive simulator creation until
+    # we know there is actually something to normalize.
+    collapsed_actions = _collapse_consecutive_navigations(normalized_actions)
+    collapse_changed = len(collapsed_actions) < len(normalized_actions)
+    rewrite_needed = _rewrite_container_stash_pattern(normalized_actions) is not None
+
+    if not collapse_changed and not rewrite_needed:
+        return root_node
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         simulator = CachingSequentialSimulator(problem, error_on_failed_checks=False)
     validation_states = _decode_plan_validation_states(problem, simulator)
-    normalized_actions = list(linear_actions)
 
-    collapsed_actions = _collapse_consecutive_navigations(normalized_actions)
-    if len(collapsed_actions) < len(normalized_actions) and _validate_linear_action_sequence(
+    if collapse_changed and _validate_linear_action_sequence(
         problem, validation_states, collapsed_actions, simulator
     ):
         normalized_actions = collapsed_actions
