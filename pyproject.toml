@@ -3,5 +3,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "your-package-name"
+name = "up-cpor"
 version = "0.1.0"
