@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+from pathlib import Path
 
 # Set environment variables for Python.NET on macOS
 # using the Mono runtime installed via Homebrew.
@@ -9,6 +11,7 @@ if sys.platform == "darwin":
 
 import pytest
 import unified_planning.environment as up_environment
+from unified_planning.io import PDDLReader
 from unified_planning.model import Fluent, InstantaneousAction, Object, Problem
 from unified_planning.model.contingent import SensingAction
 from unified_planning.model.contingent.contingent_problem import ContingentProblem
@@ -212,6 +215,36 @@ def test_cpor_engine_returns_internal_error_for_invalid_cpor_graph():
 
     assert result.status == PlanGenerationResultStatus.INTERNAL_ERROR
     assert result.plan is None
+
+
+def test_cpor_engine_enforces_timeout_for_blocked_planner_process():
+    start_time = time.monotonic()
+    result = CPORImpl()._solve(_build_minimal_contingent_problem(), timeout=0.001)
+    elapsed_time = time.monotonic() - start_time
+
+    assert result.status == PlanGenerationResultStatus.TIMEOUT
+    assert result.plan is None
+    assert elapsed_time < 2.0
+
+
+def test_cpor_engine_rebinds_subprocess_plan_to_parent_problem_actions():
+    env = up_environment.Environment()
+    env.credits_stream = None
+    reader = PDDLReader(env)
+    tests_dir = Path(__file__).resolve().parent
+    problem = reader.parse_problem(
+        str(tests_dir / "blocks2" / "d.pddl"),
+        str(tests_dir / "blocks2" / "p.pddl"),
+    )
+
+    result = CPORImpl()._solve(problem, timeout=10.0)
+
+    assert result.status == PlanGenerationResultStatus.SOLVED_SATISFICING
+    action_instance = result.plan.root_node.action_instance
+    assert action_instance.action is problem.action(action_instance.action.name)
+    for actual_parameter in action_instance.actual_parameters:
+        if actual_parameter.is_object_exp():
+            assert actual_parameter.object() is problem.object(actual_parameter.object().name)
 
 
 def test_converter_sdrupdate_forwards_boolean_observations_to_solver():

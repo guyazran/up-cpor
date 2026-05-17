@@ -48,7 +48,13 @@ class UpCporConverter:
         # including both positive and negated forms.  This avoids creating a
         # Not-expression inside the per-fluent loop.
         raw_hidden = getattr(problem, "hidden_fluents", None) or ()
-        hidden_fluents_set = frozenset(raw_hidden) | frozenset(em.Not(f) for f in raw_hidden)
+        hidden_fluents_set = set(raw_hidden)
+        for hidden in raw_hidden:
+            if hidden.is_fluent_exp():
+                hidden_fluents_set.add(em.Not(hidden))
+            elif hidden.is_not() and hidden.arg(0).is_fluent_exp():
+                hidden_fluents_set.add(hidden.arg(0))
+        hidden_fluents_set = frozenset(hidden_fluents_set)
 
         # Only add True initial values. False values for non-hidden predicates
         # are filled in by PrepareForPlanning() → CompleteKnownState() on the

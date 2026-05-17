@@ -12,9 +12,15 @@ from unified_planning.model.contingent.contingent_problem import ContingentProbl
 from unified_planning.engines.results import PlanGenerationResultStatus, PlanGenerationResult
 from unified_planning.engines.sequential_simulator import UPSequentialSimulator
 from up_cpor.caching_simulator import CachingSequentialSimulator
+from unified_planning.plans import ActionInstance
 from unified_planning.plans.contingent_plan import ContingentPlanNode
 
 from typing import Type, IO, Optional, Callable, Dict
+import os
+import pickle
+import subprocess
+import sys
+import tempfile
 import warnings
 from up_cpor.converter import CporPlanGraphError, UpCporConverter
 
@@ -283,6 +289,250 @@ def _coerce_random_seed(random_seed: Optional[int]) -> Optional[int]:
     return None if random_seed is None else int(random_seed)
 
 
+def _internal_error_result(engine_name: str) -> PlanGenerationResult:
+    return PlanGenerationResult(PlanGenerationResultStatus.INTERNAL_ERROR, None, engine_name)
+
+
+def _timeout_result(engine_name: str) -> PlanGenerationResult:
+    return PlanGenerationResult(PlanGenerationResultStatus.TIMEOUT, None, engine_name)
+
+
+def _solve_cpor_locally(
+    problem: ContingentProblem,
+    converter: UpCporConverter,
+    random_seed: Optional[int],
+    engine_name: str,
+) -> PlanGenerationResult:
+    c_domain = converter.createDomain(problem)
+    c_problem = converter.createProblem(problem, c_domain)
+
+    if random_seed is not None:
+        converter.set_random_seed(random_seed)
+    solution = converter.createCPORPlan(c_domain, c_problem)
+    try:
+        actions = converter.createActionTree(solution, problem)
+    except CporPlanGraphError:
+        return _internal_error_result(engine_name)
+
+    if solution is None or actions is None:
+        return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, engine_name)
+    actions = _normalize_linear_plan(problem, actions)
+
+    return PlanGenerationResult(
+        PlanGenerationResultStatus.SOLVED_SATISFICING,
+        ContingentPlan(actions),
+        engine_name,
+    )
+
+
+def _rebind_expression_to_problem(problem: ContingentProblem, expression):
+    if not isinstance(expression, FNode):
+        return expression
+
+    expression_manager = problem.environment.expression_manager
+    if expression.is_bool_constant():
+        return expression_manager.Bool(expression.bool_constant_value())
+    if expression.is_int_constant():
+        return expression_manager.Int(expression.int_constant_value())
+    if expression.is_real_constant():
+        return expression_manager.Real(expression.real_constant_value())
+    if expression.is_object_exp():
+        return expression_manager.ObjectExp(problem.object(expression.object().name))
+    if expression.is_fluent_exp():
+        fluent = problem.fluent(expression.fluent().name)
+        args = tuple(
+            _rebind_expression_to_problem(problem, arg)
+            for arg in expression.args
+        )
+        return expression_manager.FluentExp(fluent, args)
+    if expression.is_not():
+        return expression_manager.Not(_rebind_expression_to_problem(problem, expression.arg(0)))
+    if expression.is_and():
+        return expression_manager.And(
+            *(_rebind_expression_to_problem(problem, arg) for arg in expression.args)
+        )
+    if expression.is_or():
+        return expression_manager.Or(
+            *(_rebind_expression_to_problem(problem, arg) for arg in expression.args)
+        )
+    if expression.is_implies():
+        return expression_manager.Implies(
+            _rebind_expression_to_problem(problem, expression.arg(0)),
+            _rebind_expression_to_problem(problem, expression.arg(1)),
+        )
+    if expression.is_iff():
+        return expression_manager.Iff(
+            _rebind_expression_to_problem(problem, expression.arg(0)),
+            _rebind_expression_to_problem(problem, expression.arg(1)),
+        )
+    if expression.is_equals():
+        return expression_manager.Equals(
+            _rebind_expression_to_problem(problem, expression.arg(0)),
+            _rebind_expression_to_problem(problem, expression.arg(1)),
+        )
+
+    return expression
+
+
+def _repair_pickled_contingent_problem(problem: ContingentProblem) -> ContingentProblem:
+    problem._hidden_fluents = {
+        _rebind_expression_to_problem(problem, expression)
+        for expression in getattr(problem, "_hidden_fluents", ())
+    }
+    problem._or_initial_constraints = [
+        [
+            _rebind_expression_to_problem(problem, expression)
+            for expression in constraint
+        ]
+        for constraint in getattr(problem, "_or_initial_constraints", ())
+    ]
+    problem._oneof_initial_constraints = [
+        [
+            _rebind_expression_to_problem(problem, expression)
+            for expression in constraint
+        ]
+        for constraint in getattr(problem, "_oneof_initial_constraints", ())
+    ]
+    def warm_type_cache(expression):
+        for arg in expression.args:
+            warm_type_cache(arg)
+        problem.environment.type_checker.get_type(expression)
+
+    for expression in problem._hidden_fluents:
+        warm_type_cache(expression)
+    for constraint in problem._or_initial_constraints + problem._oneof_initial_constraints:
+        for expression in constraint:
+            warm_type_cache(expression)
+    return problem
+
+
+def _rebind_action_instance_to_problem(
+    problem: ContingentProblem,
+    action_instance: ActionInstance,
+) -> ActionInstance:
+    action = problem.action(action_instance.action.name)
+    actual_parameters = tuple(
+        _rebind_expression_to_problem(problem, parameter)
+        for parameter in action_instance.actual_parameters
+    )
+    return ActionInstance(action, actual_parameters)
+
+
+def _rebind_observation_to_problem(problem: ContingentProblem, observation: Dict) -> Dict:
+    return {
+        _rebind_expression_to_problem(problem, fluent_exp): _rebind_expression_to_problem(problem, value)
+        for fluent_exp, value in observation.items()
+    }
+
+
+def _rebind_plan_node_to_problem(
+    problem: ContingentProblem,
+    node: Optional[ContingentPlanNode],
+) -> Optional[ContingentPlanNode]:
+    if node is None:
+        return None
+
+    rebound_node = ContingentPlanNode(
+        _rebind_action_instance_to_problem(problem, node.action_instance)
+    )
+    for observation, child in node.children:
+        rebound_node.add_child(
+            _rebind_observation_to_problem(problem, observation),
+            _rebind_plan_node_to_problem(problem, child),
+        )
+    return rebound_node
+
+
+def _rebind_result_to_problem(
+    problem: ContingentProblem,
+    result: PlanGenerationResult,
+    engine_name: str,
+) -> PlanGenerationResult:
+    if result.plan is None:
+        return result
+
+    root_node = _rebind_plan_node_to_problem(problem, result.plan.root_node)
+    return PlanGenerationResult(
+        result.status,
+        ContingentPlan(root_node),
+        engine_name,
+        result.metrics,
+        result.log_messages,
+    )
+
+
+def _terminate_process(process: subprocess.Popen) -> None:
+    process.terminate()
+    try:
+        process.wait(timeout=1.0)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+
+def _solve_cpor_with_timeout(
+    problem: ContingentProblem,
+    converter: UpCporConverter,
+    random_seed: Optional[int],
+    engine_name: str,
+    timeout: Optional[float],
+) -> PlanGenerationResult:
+    if timeout is None:
+        return _solve_cpor_locally(problem, converter, random_seed, engine_name)
+
+    timeout = float(timeout)
+    if timeout <= 0:
+        return _timeout_result(engine_name)
+
+    with tempfile.TemporaryDirectory(prefix="up_cpor_") as temp_dir:
+        input_path = os.path.join(temp_dir, "input.pickle")
+        result_path = os.path.join(temp_dir, "result.pickle")
+
+        with open(input_path, "wb") as input_file:
+            pickle.dump(
+                {
+                    "problem": problem,
+                    "converter": converter,
+                    "random_seed": random_seed,
+                    "engine_name": engine_name,
+                },
+                input_file,
+                protocol=pickle.HIGHEST_PROTOCOL,
+            )
+
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "up_cpor._cpor_worker",
+                input_path,
+                result_path,
+            ],
+        )
+
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _terminate_process(process)
+            return _timeout_result(engine_name)
+
+        if not os.path.exists(result_path):
+            return _internal_error_result(engine_name)
+
+        with open(result_path, "rb") as result_file:
+            payload = pickle.load(result_file)
+
+    if not isinstance(payload, tuple) or len(payload) != 2:
+        return _internal_error_result(engine_name)
+
+    payload_type, value = payload
+    if payload_type == "result":
+        return _rebind_result_to_problem(problem, value, engine_name)
+    if payload_type == "exception":
+        return _internal_error_result(engine_name)
+    return _internal_error_result(engine_name)
+
+
 MetaCredits = Credits('Conitngent Planning Algorithms',
                     'Guy Shani',
                     'shanigu@bgu.ac.il',
@@ -374,21 +624,13 @@ class CPORImpl(Engine, OneshotPlannerMixin):
         if not self.supports(problem.kind):
             return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
 
-        c_domain = self.cnv.createDomain(problem)
-        c_problem = self.cnv.createProblem(problem, c_domain)
-
-        if self.random_seed is not None:
-            self.cnv.set_random_seed(self.random_seed)
-        solution = self.cnv.createCPORPlan(c_domain, c_problem)
-        try:
-            actions = self.cnv.createActionTree(solution, problem)
-        except CporPlanGraphError:
-            return PlanGenerationResult(PlanGenerationResultStatus.INTERNAL_ERROR, None, self.name)
-        if solution is None or actions is None:
-            return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
-        actions = _normalize_linear_plan(problem, actions)
-
-        return PlanGenerationResult(PlanGenerationResultStatus.SOLVED_SATISFICING, ContingentPlan(actions), self.name)
+        return _solve_cpor_with_timeout(
+            problem,
+            self.cnv,
+            self.random_seed,
+            self.name,
+            timeout,
+        )
 
     def destroy(self):
         pass
@@ -468,22 +710,13 @@ class CPORMetaEngineImpl(MetaEngine, mixins.OneshotPlannerMixin):
             if contingent_result is not None:
                 return contingent_result
 
-        c_domain = self.cnv.createDomain(problem)
-        c_problem = self.cnv.createProblem(problem, c_domain)
-
-        if self.random_seed is not None:
-            self.cnv.set_random_seed(self.random_seed)
-        solution = self.cnv.createCPORPlan(c_domain, c_problem)
-        try:
-            actions = self.cnv.createActionTree(solution, problem)
-        except CporPlanGraphError:
-            return PlanGenerationResult(PlanGenerationResultStatus.INTERNAL_ERROR, None, self.name)
-
-        if solution is None or actions is None:
-            return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
-        actions = _normalize_linear_plan(problem, actions)
-
-        return PlanGenerationResult(PlanGenerationResultStatus.SOLVED_SATISFICING, ContingentPlan(actions), self.name)
+        return _solve_cpor_with_timeout(
+            problem,
+            self.cnv,
+            self.random_seed,
+            self.name,
+            timeout,
+        )
 
 
 class SDRImpl(Engine, ActionSelectorMixin):
