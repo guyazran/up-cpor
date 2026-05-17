@@ -8,6 +8,7 @@ if sys.platform == "darwin":
 
 import clr
 import unified_planning.environment as up_environment
+from unified_planning.engines.results import PlanGenerationResultStatus
 from unified_planning.engines.sequential_simulator import UPSequentialSimulator
 from unified_planning.model import Fluent, InstantaneousAction, Object, Problem, UPState, Variable
 from unified_planning.model.contingent import SensingAction
@@ -225,6 +226,33 @@ def _build_precondition_failure_problem():
     action.add_precondition(em.FluentExp(flag))
     action.add_effect(em.FluentExp(done), True)
     problem.add_action(action)
+    problem.add_goal(em.FluentExp(done))
+    return problem
+
+
+def _build_action_history_replay_problem():
+    env = up_environment.Environment()
+    em = env.expression_manager
+    bool_type = env.type_manager.BoolType()
+
+    problem = ContingentProblem("action_history_replay", env)
+    p = Fluent("p", bool_type, environment=env)
+    q = Fluent("q", bool_type, environment=env)
+    done = Fluent("done", bool_type, environment=env)
+    for fluent in (p, q, done):
+        problem.add_fluent(fluent, default_initial_value=False)
+    problem.add_unknown_initial_constraint(em.FluentExp(p))
+
+    start = InstantaneousAction("start", _env=env)
+    start.add_precondition(em.FluentExp(p))
+    start.add_effect(em.FluentExp(q), True)
+    problem.add_action(start)
+
+    finish = InstantaneousAction("finish", _env=env)
+    finish.add_precondition(em.FluentExp(q))
+    finish.add_effect(em.FluentExp(done), True)
+    problem.add_action(finish)
+
     problem.add_goal(em.FluentExp(done))
     return problem
 
@@ -640,6 +668,34 @@ def test_belief_state_can_force_meaningful_disagreement_instead_of_case_tag_disa
     assert ("x", True, ()) in _state_signatures(alternative_state)
 
 
+def test_belief_state_action_replay_drops_inapplicable_history_successors():
+    problem = _build_action_history_replay_problem()
+    _, c_domain, c_problem = _convert_problem(problem)
+    belief_state = c_problem.GetInitialBelief()
+
+    p_world = HashSet[Predicate]()
+    p_world.Add(GroundedPredicate("p"))
+    not_p_world = HashSet[Predicate]()
+
+    chosen_states = List[ISet[Predicate]]()
+    chosen_states.Add(p_world)
+    chosen_states.Add(not_p_world)
+
+    applied_actions = List[PlanningAction]()
+    applied_actions.Add(c_domain.GroundActionByName(["start"]))
+    applied_actions.Add(c_domain.GroundActionByName(["finish"]))
+
+    replayed_states = _invoke_private(
+        belief_state,
+        "ApplyActions",
+        chosen_states,
+        applied_actions,
+    )
+
+    assert replayed_states.Count == 1
+    assert replayed_states[0].Contains(PredicateFormula(GroundedPredicate("done")))
+
+
 def test_get_next_state_handles_goal_states_without_replanning():
     env = up_environment.Environment()
     em = env.expression_manager
@@ -704,6 +760,28 @@ def test_engine_rewrites_container_stash_patterns():
         "navigate-to",
         "place-inside",
     ]
+
+
+def test_meta_cpor_delegates_fully_known_contingent_problem_to_classical_engine():
+    env = up_environment.Environment()
+    env.credits_stream = None
+    env.factory.add_meta_engine("MetaCPORPlanning", "up_cpor.engine", "CPORMetaEngineImpl")
+
+    bool_type = env.type_manager.BoolType()
+    problem = ContingentProblem("classical_contingent", env)
+    done = Fluent("done", bool_type, environment=env)
+    problem.add_fluent(done, default_initial_value=False)
+    finish = InstantaneousAction("finish", _env=env)
+    finish.add_effect(done, True)
+    problem.add_action(finish)
+    problem.add_goal(done())
+
+    with env.factory.OneshotPlanner(name="MetaCPORPlanning[fast-downward]") as planner:
+        result = planner.solve(problem)
+
+    assert result.status == PlanGenerationResultStatus.SOLVED_SATISFICING
+    assert result.plan.root_node.action_instance.action.name == "finish"
+    assert len(result.plan.root_node.children) == 0
 
 
 def test_ff_utils_preserve_initializers_and_large_table_limits():

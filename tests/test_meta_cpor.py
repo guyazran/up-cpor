@@ -14,7 +14,20 @@ from cpor_test_utils import TEST_RANDOM_SEED, assert_dot_equal, parse_expected_d
 from domains import DOMAINS, TESTS_DIR
 from up_test_utils import make_test_environment, parse_test_problem
 
-CLASSICAL_PLANNERS = ("tamer", "pyperplan")
+def _available_classical_planners():
+    env = make_test_environment(meta_cpor=True)
+    preferred = ("tamer", "pyperplan", "fast-downward")
+    available = tuple(
+        planner
+        for planner in preferred
+        if f"MetaCPORPlanning[{planner}]" in env.factory.engines
+    )
+    if not available:
+        pytest.skip("No MetaCPOR-compatible classical planners are installed.", allow_module_level=True)
+    return available
+
+
+CLASSICAL_PLANNERS = _available_classical_planners()
 META_CPOR_PLANNER_PARAMS = {"random_seed": TEST_RANDOM_SEED}
 
 

@@ -1,5 +1,5 @@
 from unified_planning.engines import Credits, MetaEngine, Engine
-from unified_planning.model import FNode
+from unified_planning.model import FNode, Problem
 from unified_planning.plans import ContingentPlan
 import unified_planning.engines.mixins as mixins
 from unified_planning.engines.mixins.oneshot_planner import OneshotPlannerMixin
@@ -7,6 +7,7 @@ from unified_planning.engines.mixins.action_selector import ActionSelectorMixin
 from unified_planning.engines.mixins.compiler import CompilationKind
 import unified_planning as up
 from unified_planning.model import ProblemKind, AbstractProblem
+from unified_planning.model.contingent import SensingAction
 from unified_planning.model.contingent.contingent_problem import ContingentProblem
 from unified_planning.engines.results import PlanGenerationResultStatus, PlanGenerationResult
 from unified_planning.engines.sequential_simulator import UPSequentialSimulator
@@ -53,6 +54,54 @@ def _build_linear_plan(actions) -> Optional[ContingentPlanNode]:
         current_node.add_child({}, child)
         current_node = child
     return root
+
+
+def _has_contingent_state_information(problem: ContingentProblem) -> bool:
+    return (
+        len(problem.or_constraints) > 0
+        or len(problem.oneof_constraints) > 0
+        or len(getattr(problem, "hidden_fluents", ())) > 0
+    )
+
+
+def _has_sensing_actions(problem: ContingentProblem) -> bool:
+    return any(isinstance(action, SensingAction) for action in problem.actions)
+
+
+def _copy_as_classical_problem(problem: ContingentProblem) -> Problem:
+    classical_problem = Problem(
+        problem.name,
+        problem.environment,
+        initial_defaults=problem.initial_defaults,
+    )
+    classical_problem.add_objects(problem.all_objects)
+    for fluent in problem.fluents:
+        default = problem.fluents_defaults.get(fluent, None)
+        if default is None:
+            classical_problem.add_fluent(fluent)
+        else:
+            classical_problem.add_fluent(fluent, default_initial_value=default)
+    for fluent_exp, value in problem.initial_values.items():
+        classical_problem.set_initial_value(fluent_exp, value)
+    for action in problem.actions:
+        classical_problem.add_action(action.clone())
+    for goal in problem.goals:
+        classical_problem.add_goal(goal)
+    return classical_problem
+
+
+def _classical_result_to_contingent_result(result, engine_name: str):
+    if result.status != PlanGenerationResultStatus.SOLVED_SATISFICING or result.plan is None:
+        return None
+
+    root_node = _build_linear_plan(list(result.plan.actions))
+    return PlanGenerationResult(
+        result.status,
+        ContingentPlan(root_node),
+        engine_name,
+        result.metrics,
+        result.log_messages,
+    )
 
 
 def _iter_case_tag_groups(problem):
@@ -405,6 +454,19 @@ class CPORMetaEngineImpl(MetaEngine, mixins.OneshotPlannerMixin):
             return PlanGenerationResult(PlanGenerationResultStatus.UNSOLVABLE_PROVEN, None, self.name)
 
         self.SetClassicalPlanner(self.engine)
+
+        if (
+            not _has_contingent_state_information(problem)
+            and not _has_sensing_actions(problem)
+        ):
+            classical_problem = _copy_as_classical_problem(problem)
+            classical_result = self.engine.solve(classical_problem, timeout=timeout)
+            contingent_result = _classical_result_to_contingent_result(
+                classical_result,
+                self.name,
+            )
+            if contingent_result is not None:
+                return contingent_result
 
         c_domain = self.cnv.createDomain(problem)
         c_problem = self.cnv.createProblem(problem, c_domain)

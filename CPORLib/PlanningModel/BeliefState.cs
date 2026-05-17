@@ -1813,12 +1813,15 @@ namespace CPORLib.PlanningModel
                 lNext = new List<State>();
                 foreach (State s in lCurrent)
                 {
+                    if (s == null)
+                        continue;
                     State sTag = s.Apply(a);
-                    //if (sTag == null)
-                    //    sTag = s.Apply(a);
-                    lNext.Add(sTag);
+                    if (sTag != null)
+                        lNext.Add(sTag);
                 }
                 lCurrent = lNext;
+                if (lCurrent.Count == 0)
+                    break;
             }
 
             return lCurrent;
